@@ -33,9 +33,12 @@ local frameInterval = 10 -- in frames
 
 -- local data = {}
 local frame = 0
+local lastProcessedFrame = 0
 local isSpec
 -- local teamList = Spring.GetTeamList()
 -- local teamCount = 0
+
+
 
 local GetPlayerInfo = Spring.GetPlayerInfo
 local GetTeamStatsHistory = Spring.GetTeamStatsHistory
@@ -67,6 +70,16 @@ local SUPPORTED_COMMANDS = {
     "RESET"
 }
 
+local EVENT_ENABLED = 
+{
+    ["INTERVAL"] = true,
+    ["ON_START"] = true,
+    ["ON_END"] = true,
+}
+
+local bab_event_CurrentIntervalTime = 0
+local bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
+
 local function split_string(str, delim)
     if not str then
         Spring.Echo("Splitting nil string")
@@ -91,6 +104,7 @@ local function load_binds()
             if line_words then
                 if line_words[1] == "BIND" then --Add/configure client event
                     bound_event = line_words[2]
+                    EVENT_ENABLED[bound_event] = true --All events in config are enabled by default
                     for i = 2, #line_words, 1 do
                         if EVENT_BINDS[bound_event] then
                             local param_pair = split_string(line_words[i], ":")
@@ -306,16 +320,60 @@ end
 --     end
 -- end
 
+local function format_command_string(commandFrame, commandName, commandParams)
+    local assembled_command_string = commandFrame.." "
+    assembled_command_string = assembled_command_string..commandName.." "
+    if commandParams then
+        for c_paramk, c_paramv in pairs(commandParams) do
+            assembled_command_string = assembled_command_string..c_paramk..":"..c_paramv.." "
+        end
+    end
+    return string.sub(assembled_command_string, 1, #assembled_command_string-1)
+end
+
+local function insert_bound_command(commandFrame, eventName)
+    local commandName = EVENT_BINDS[eventName]["COMMAND"]
+    if not commandName then
+        Spring.Echo("No command bound to event: "..eventName)
+        return nil 
+    end
+    local commandParams = EVENT_BINDS[eventName]["C_PARAMS"]
+    queuedCommands[#queuedCommands+1] = format_command_string(commandFrame, commandName, commandParams)
+end
+
+local function do_metrics()
+    --Interval
+    bab_event_CurrentIntervalTime = bab_event_CurrentIntervalTime + frame - lastProcessedFrame
+end
+
+local function check_events()
+    --Interval
+    if bab_event_CurrentIntervalTime >= bab_event_IntervalTime then
+        insert_bound_command(frame, "INTERVAL")
+        Spring.Echo("Event: INTERVAL triggered on frame: "..frame)
+        bab_event_CurrentIntervalTime = 0
+        bab_event_IntervalTime = math.floor((EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] + math.random()-0.5 * EVENT_BINDS["INTERVAL"]["PARAMS"]["Randomness"]) * 30)
+    end
+end
+
 local function process_events(force)
     if frame % frameInterval == 0 or force then
-        
+        do_metrics()
+        check_events()
+
+        lastProcessedFrame = frame
     end
+end
+
+local function bab_reset()
+    insert_bound_command(frame, "ON_END")
 end
 
 function widget:GameFrame(n)
     frame = n
     -- teamCount = 0
     process_events(false)
+    append_queued_commands_to_file()
 end
 
 -- local function createName()
@@ -338,14 +396,17 @@ end
 function widget:Initialize()
     -- timeInterval = timeInterval*30
     widgetHandler:AddAction("emergency device stop", bab_reset, nil, "p")
-
+    load_binds()
+    reset_event_file()
     isSpec = Spring.GetSpectatingState()
 end
 
 function widget:GameStart()
     -- createPlayerTable()
+    insert_bound_command(0, "ON_START")
 end
 
 function widget:GameOver()
     -- saveData()
+    insert_bound_command(frame, "ON_END")
 end
