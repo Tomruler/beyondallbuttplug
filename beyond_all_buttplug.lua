@@ -1,12 +1,12 @@
 function widget:GetInfo()
     return {
-      name = "Beyond All Buttplug",
-      desc = "Buttplug.io integration for Beyond All Reason",
-      author = "Tomruler",
-      date = "2024",
-      license = "GNU GPL, v2 or later",
-      layer = 0,
-      enabled = false
+        name = "Beyond All Buttplug",
+        desc = "Buttplug.io integration for Beyond All Reason",
+        author = "Tomruler",
+        date = "2024",
+        license = "GNU GPL, v2 or later",
+        layer = 0,
+        enabled = false
     }
 end
 
@@ -33,7 +33,7 @@ local frameInterval = 10 -- in frames
 
 -- local data = {}
 local frame = 0
--- local isSpec
+local isSpec
 -- local teamList = Spring.GetTeamList()
 -- local teamCount = 0
 
@@ -46,14 +46,14 @@ local GetGaiaTeamID = Spring.GetGaiaTeamID
 local playerTable = {}
 local EVENT_BINDS = {
     ["INTERVAL"] = {
-        ["PARAMS"] = {["Interval"] = 10, ["Randomness"] = 2},
+        ["PARAMS"] = { ["Interval"] = 10, ["Randomness"] = 2 },
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = {["Motor"]=-1, ["Strength"]=0.2, ["Duration"]=1}
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
     },
     ["ON_START"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = {["Motor"]=-1, ["Strength"]=0.2, ["Duration"]=5}
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 5 }
     },
     ["ON_END"] = {
         ["PARAMS"] = {},
@@ -68,43 +68,69 @@ local SUPPORTED_COMMANDS = {
 }
 
 local function split_string(str, delim)
-    if not str then 
+    if not str then
         Spring.Echo("Splitting nil string")
-        return nil 
+        return nil
     end
     if delim == nil then
         delim = "%s"
     end
-    local t={}
-    for word in string.gmatch(str, "([^"..delim.."]+)") do
+    local t = {}
+    for word in string.gmatch(str, "([^" .. delim .. "]+)") do
         table.insert(t, word)
     end
     return t
 end
 
 local function load_binds()
-    local file = io.open(globalPath.."bab_binds.txt", "r")
+    local file = io.open(globalPath .. "bab_binds.txt", "r")
     if file then
         local bound_event
         for line in file:lines() do
             local line_words = split_string(line, nil)
             if line_words then
-                if line_words[1] == "BIND" then
+                if line_words[1] == "BIND" then --Add/configure client event
                     bound_event = line_words[2]
-                    for i=2, #line_words, 1 do
-                    if EVENT_BINDS[bound_event] then
+                    for i = 2, #line_words, 1 do
+                        if EVENT_BINDS[bound_event] then
+                            local param_pair = split_string(line_words[i], ":")
+                            if not param_pair or #param_pair ~= 2 then
+                                Spring.Echo("Invalid param when binding" .. bound_event)
+                                break
+                            end
+                            local existing_param_name = EVENT_BINDS[bound_event]["PARAMS"][param_pair[1]]
+                            if existing_param_name then
+                                EVENT_BINDS[bound_event]["PARAMS"][existing_param_name] = param_pair[2]
+                            else
+                                Spring.Echo("Binding new parameter: " .. param_pair[1] .. "with value: " .. param_pair
+                                    [2])
+                                Spring.Echo("Are you sure this was spelled correctly?")
+                                EVENT_BINDS[bound_event]["PARAMS"][param_pair[1]] = param_pair[2]
+                            end
+                        end
+                    end
+                elseif line_words[1] == "TO" then --Add commands to event
+                    local bound_command = line_words[2]
+                    if not SUPPORTED_COMMANDS[bound_event] then
+                        Spring.Echo("Binding new command: " .. bound_command .. "to event: " .. bound_event)
+                        Spring.Echo(
+                            "This command is not listed as being supported. Are you sure this was spelled correctly?")
+                    end
+                    EVENT_BINDS[bound_event]["COMMAND"] = bound_command
+                    for i = 2, #line_words, 1 do
                         local param_pair = split_string(line_words[i], ":")
                         if not param_pair or #param_pair ~= 2 then
-                            Spring.Echo("Invalid param when binding"..bound_event)
+                            Spring.Echo("Invalid param when binding command" .. bound_command)
                             break
                         end
-                        local existing_param_name = EVENT_BINDS[bound_event]["PARAMS"][param_pair[1]]
+                        local existing_param_name = EVENT_BINDS[bound_event]["C_PARAMS"][param_pair[1]]
                         if existing_param_name then
-                            EVENT_BINDS[bound_event]["PARAMS"][existing_param_name] = param_pair[2]
+                            EVENT_BINDS[bound_event]["C_PARAMS"][existing_param_name] = param_pair[2]
                         else
-                            Spring.Echo("Binding new parameter: "..param_pair[1].."with value: "..param_pair[2])
+                            Spring.Echo("Binding new command parameter: " ..
+                                param_pair[1] .. "with value: " .. param_pair[2])
                             Spring.Echo("Are you sure this was spelled correctly?")
-                            EVENT_BINDS[bound_event]["PARAMS"][param_pair[1]] = param_pair[2]
+                            EVENT_BINDS[bound_event]["C_PARAMS"][param_pair[1]] = param_pair[2]
                         end
                     end
                 end
@@ -134,11 +160,11 @@ local queuedCommands = {}
 
 -- local function lines_from(file)
 --     if not file then return {} end
-    
+
 -- end
 
 local function append_queued_commands_to_file()
-    local file = io.open(globalPath.."cmdlog.txt", "a")
+    local file = io.open(globalPath .. "cmdlog.txt", "a")
     if file then
         for command in queuedCommands do
             file:write(command)
@@ -189,132 +215,137 @@ end
 --     end
 -- end
 
-local function addStats(hist)
-    hist.damageEfficiency = 0
-    if not (hist.damageReceived == 0) then
-        hist.damageEfficiency = (hist.damageDealt/hist.damageReceived)*100
-    end
+-- local function addStats(hist)
+--     hist.damageEfficiency = 0
+--     if not (hist.damageReceived == 0) then
+--         hist.damageEfficiency = (hist.damageDealt/hist.damageReceived)*100
+--     end
 
-    return hist
-end
+--     return hist
+-- end
 
-local function createTable()
-    teamCount = 0
-    local dataTable = {}
-    local finalFrame
-    timeInterval = math.ceil(timeInterval/450)
-    for _,teamID in ipairs(teamList) do
-        if teamID ~= GetGaiaTeamID() then
-            local range = GetTeamStatsHistory(teamID)
-            local history = GetTeamStatsHistory(teamID,0,range)
-            if history then
-                teamCount = teamCount + 1
-                for i = 1, range, timeInterval do
-                    for stat, val in pairs(addStats(history[i])) do
-                        if not ignoreList[stat] then
-                            local statTable = dataTable[stat]
-                            if statTable then
-                                local playerStat = dataTable[stat][teamID]
-                                if playerStat then
-                                    playerStat[#playerStat+1] = val
-                                else
-                                    statTable[teamID] = {val}
-                                end
-                            else
-                                dataTable[stat] = {[teamID] = {val}}
-                            end
-                        end
-                    end
-                end
-                if not ((range%timeInterval)==0) then
-                    for stat, val in pairs(history[#history]) do
-                        if stat == "frame" then
-                            finalFrame = val
-                        end
-                        if not ignoreList[stat] then
-                            local playerStat = dataTable[stat][teamID]
-                            if playerStat then
-                                playerStat[#playerStat+1] = val
-                            end
-                        end
-                    end
-                end
-                if not finalFrame then
-                    finalFrame = range
-                end
-            end
-        end
-    end
-    data = dataTable
-    timeInterval = timeInterval*450
-end
+-- local function createTable()
+--     teamCount = 0
+--     local dataTable = {}
+--     local finalFrame
+--     timeInterval = math.ceil(timeInterval/450)
+--     for _,teamID in ipairs(teamList) do
+--         if teamID ~= GetGaiaTeamID() then
+--             local range = GetTeamStatsHistory(teamID)
+--             local history = GetTeamStatsHistory(teamID,0,range)
+--             if history then
+--                 teamCount = teamCount + 1
+--                 for i = 1, range, timeInterval do
+--                     for stat, val in pairs(addStats(history[i])) do
+--                         if not ignoreList[stat] then
+--                             local statTable = dataTable[stat]
+--                             if statTable then
+--                                 local playerStat = dataTable[stat][teamID]
+--                                 if playerStat then
+--                                     playerStat[#playerStat+1] = val
+--                                 else
+--                                     statTable[teamID] = {val}
+--                                 end
+--                             else
+--                                 dataTable[stat] = {[teamID] = {val}}
+--                             end
+--                         end
+--                     end
+--                 end
+--                 if not ((range%timeInterval)==0) then
+--                     for stat, val in pairs(history[#history]) do
+--                         if stat == "frame" then
+--                             finalFrame = val
+--                         end
+--                         if not ignoreList[stat] then
+--                             local playerStat = dataTable[stat][teamID]
+--                             if playerStat then
+--                                 playerStat[#playerStat+1] = val
+--                             end
+--                         end
+--                     end
+--                 end
+--                 if not finalFrame then
+--                     finalFrame = range
+--                 end
+--             end
+--         end
+--     end
+--     data = dataTable
+--     timeInterval = timeInterval*450
+-- end
 
-local function addCurrentData(force)
-    if ((frame%timeInterval)==0) or force then
-        for _,teamID in ipairs(teamList) do
-            if teamID ~= GetGaiaTeamID() then
-                local range = GetTeamStatsHistory(teamID)
-                local history = GetTeamStatsHistory(teamID,0,range)
-                if history then
-                    teamCount = teamCount + 1
-                    history = history[#history]
+-- local function addCurrentData(force)
+--     if ((frame%timeInterval)==0) or force then
+--         for _,teamID in ipairs(teamList) do
+--             if teamID ~= GetGaiaTeamID() then
+--                 local range = GetTeamStatsHistory(teamID)
+--                 local history = GetTeamStatsHistory(teamID,0,range)
+--                 if history then
+--                     teamCount = teamCount + 1
+--                     history = history[#history]
 
-                    for stat, val in pairs(addStats(history)) do
-                        if not ignoreList[stat] then
-                            local statTable = data[stat]
-                            if statTable then
-                                local playerStat = data[stat][teamID]
-                                if playerStat then
-                                    playerStat[#playerStat+1] = val
-                                else
-                                    statTable[teamID] = {val}
-                                end
-                            else
-                                data[stat] = {[teamID] = {val}}
-                            end
-                        end
-                    end
-                end
-            end
-        end
+--                     for stat, val in pairs(addStats(history)) do
+--                         if not ignoreList[stat] then
+--                             local statTable = data[stat]
+--                             if statTable then
+--                                 local playerStat = data[stat][teamID]
+--                                 if playerStat then
+--                                     playerStat[#playerStat+1] = val
+--                                 else
+--                                     statTable[teamID] = {val}
+--                                 end
+--                             else
+--                                 data[stat] = {[teamID] = {val}}
+--                             end
+--                         end
+--                     end
+--                 end
+--             end
+--         end
+--     end
+-- end
+
+local function process_events(force)
+    if frame % frameInterval == 0 or force then
+        
     end
 end
 
 function widget:GameFrame(n)
-    frame =  n
-    teamCount = 0
-    addCurrentData(false)
+    frame = n
+    -- teamCount = 0
+    process_events(false)
 end
 
-local function createName()
-    local mapName = Game.mapName
-    local timeDate = os.date("%Y-%m-%d_%H-%M".."_"..mapName..".csv")
-    return timeDate
-end
+-- local function createName()
+--     local mapName = Game.mapName
+--     local timeDate = os.date("%Y-%m-%d_%H-%M".."_"..mapName..".csv")
+--     return timeDate
+-- end
 
-local function saveData(fromAction)
-    if isSpec then
-        addCurrentData(true)
-    else
-        createTable()
-        Spring.Echo("Save will be more low resolution")
-    end
-    tableToCSV(data, createName(), frame)
-    Spring.Echo("Resource Data Saved")
-end
+-- local function saveData(fromAction)
+--     if isSpec then
+--         addCurrentData(true)
+--     else
+--         createTable()
+--         Spring.Echo("Save will be more low resolution")
+--     end
+--     tableToCSV(data, createName(), frame)
+--     Spring.Echo("Resource Data Saved")
+-- end
 
 function widget:Initialize()
-    timeInterval = timeInterval*30
-    widgetHandler:AddAction("save_resource_data", saveData, nil, "p")
+    -- timeInterval = timeInterval*30
+    widgetHandler:AddAction("emergency device stop", bab_reset, nil, "p")
 
     isSpec = Spring.GetSpectatingState()
 end
 
 function widget:GameStart()
-    createPlayerTable()
+    -- createPlayerTable()
 end
 
-
 function widget:GameOver()
-    saveData()
+    -- saveData()
 end
