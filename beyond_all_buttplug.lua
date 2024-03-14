@@ -90,7 +90,7 @@ local function split_string(str, delim)
     end
     local t = {}
     for word in string.gmatch(str, "([^" .. delim .. "]+)") do
-        table.insert(t, word)
+        table.insert(t, #t+1, word)
     end
     return t
 end
@@ -105,7 +105,7 @@ local function load_binds()
                 if line_words[1] == "BIND" then --Add/configure client event
                     bound_event = line_words[2]
                     EVENT_ENABLED[bound_event] = true --All events in config are enabled by default
-                    for i = 2, #line_words, 1 do
+                    for i = 3, #line_words, 1 do
                         if EVENT_BINDS[bound_event] then
                             local param_pair = split_string(line_words[i], ":")
                             if not param_pair or #param_pair ~= 2 then
@@ -125,13 +125,13 @@ local function load_binds()
                     end
                 elseif line_words[1] == "TO" then --Add commands to event
                     local bound_command = line_words[2]
-                    if not SUPPORTED_COMMANDS[bound_event] then
-                        Spring.Echo("Binding new command: " .. bound_command .. "to event: " .. bound_event)
+                    Spring.Echo("Binding new command: " .. bound_command .. " to event: " .. bound_event)
+                    if not SUPPORTED_COMMANDS[bound_command] then
                         Spring.Echo(
-                            "This command is not listed as being supported. Are you sure this was spelled correctly?")
+                            "This command: "..bound_command.." is not listed as being supported. Are you sure this was spelled correctly?")
                     end
                     EVENT_BINDS[bound_event]["COMMAND"] = bound_command
-                    for i = 2, #line_words, 1 do
+                    for i = 3, #line_words, 1 do
                         local param_pair = split_string(line_words[i], ":")
                         if not param_pair or #param_pair ~= 2 then
                             Spring.Echo("Invalid param when binding command" .. bound_command)
@@ -143,7 +143,7 @@ local function load_binds()
                         else
                             Spring.Echo("Binding new command parameter: " ..
                                 param_pair[1] .. "with value: " .. param_pair[2])
-                            Spring.Echo("Are you sure this was spelled correctly?")
+                            Spring.Echo("Are you sure the parameter: "..param_pair[1].." was spelled correctly?")
                             EVENT_BINDS[bound_event]["C_PARAMS"][param_pair[1]] = param_pair[2]
                         end
                     end
@@ -180,8 +180,9 @@ local queuedCommands = {}
 local function append_queued_commands_to_file()
     local file = io.open(globalPath .. "cmdlog.txt", "a")
     if file then
-        for command in queuedCommands do
-            file:write(command)
+        for _, command in pairs(queuedCommands) do
+            Spring.Echo("Writing to file: "..command)
+            file:write(command, "\n")
         end
         queuedCommands = {}
         file:close()
@@ -392,6 +393,18 @@ end
 --     tableToCSV(data, createName(), frame)
 --     Spring.Echo("Resource Data Saved")
 -- end
+
+local function reset_event_file()
+    local file = io.open(globalPath .. "cmdlog.txt", "w")
+    if file then
+        file:close()
+    else --not sure if this is necessary
+        file = io.open(globalPath .. "cmdlog.txt", "w")
+        if file then
+            file:close()
+        end
+    end
+end
 
 function widget:Initialize()
     -- timeInterval = timeInterval*30
