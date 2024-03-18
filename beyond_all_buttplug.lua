@@ -65,9 +65,9 @@ local EVENT_BINDS = {
     }
 }
 local SUPPORTED_COMMANDS = {
-    "VIBRATE",
-    "POWER",
-    "RESET"
+    ["VIBRATE"] = true,
+    ["POWER"] = true,
+    ["RESET"] = true
 }
 
 local EVENT_ENABLED = 
@@ -80,6 +80,19 @@ local EVENT_ENABLED =
 local bab_event_CurrentIntervalTime = 0
 local bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
 
+local function print_table(tbl, indent)
+    indent = indent or 0
+    for k, v in pairs(tbl) do
+        local formatting = string.rep("  ", indent) .. k .. ": "
+        if type(v) == "table" then
+            Spring.Echo(formatting)
+            print_table(v, indent + 1)
+        else
+            Spring.Echo(formatting .. tostring(v))
+        end
+    end
+end
+
 local function split_string(str, delim)
     if not str then
         Spring.Echo("Splitting nil string")
@@ -90,13 +103,17 @@ local function split_string(str, delim)
     end
     local t = {}
     for word in string.gmatch(str, "([^" .. delim .. "]+)") do
-        table.insert(t, #t+1, word)
+        t[#t+1] = word
     end
+    -- Spring.Echo(str.." has been split into: \n" )
+    -- print_table(t)
     return t
 end
 
 local function load_binds()
     local file = io.open(globalPath .. "bab_binds.txt", "r")
+    -- Spring.Echo("Event binds table:")
+    -- print_table(EVENT_BINDS, 1)
     if file then
         local bound_event
         for line in file:lines() do
@@ -123,6 +140,7 @@ local function load_binds()
                             end
                         end
                     end
+                    Spring.Echo("Event: "..bound_event.." has: "..#EVENT_BINDS[bound_event]["PARAMS"].." parameters bound")
                 elseif line_words[1] == "TO" then --Add commands to event
                     local bound_command = line_words[2]
                     Spring.Echo("Binding new command: " .. bound_command .. " to event: " .. bound_event)
@@ -132,25 +150,33 @@ local function load_binds()
                     end
                     EVENT_BINDS[bound_event]["COMMAND"] = bound_command
                     for i = 3, #line_words, 1 do
-                        local param_pair = split_string(line_words[i], ":")
-                        if not param_pair or #param_pair ~= 2 then
+                        -- print_table(EVENT_BINDS[bound_event]["C_PARAMS"],1)
+                        local c_param_pair = split_string(line_words[i], ":")
+                        if not c_param_pair or #c_param_pair ~= 2 then
                             Spring.Echo("Invalid param when binding command" .. bound_command)
                             break
                         end
-                        local existing_param_name = EVENT_BINDS[bound_event]["C_PARAMS"][param_pair[1]]
-                        if existing_param_name then
-                            EVENT_BINDS[bound_event]["C_PARAMS"][existing_param_name] = param_pair[2]
+                        -- print_table(EVENT_BINDS[bound_event]["C_PARAMS"],1)
+                        if EVENT_BINDS[bound_event]["C_PARAMS"][c_param_pair[1]] then
+                            -- Spring.Echo("Binding existing command parameter: " ..
+                            --     c_param_pair[1] .. "with value: " .. c_param_pair[2])
+                            EVENT_BINDS[bound_event]["C_PARAMS"][c_param_pair[1]] = c_param_pair[2]
+                            -- print_table(EVENT_BINDS[bound_event]["C_PARAMS"],1)
                         else
                             Spring.Echo("Binding new command parameter: " ..
-                                param_pair[1] .. "with value: " .. param_pair[2])
-                            Spring.Echo("Are you sure the parameter: "..param_pair[1].." was spelled correctly?")
-                            EVENT_BINDS[bound_event]["C_PARAMS"][param_pair[1]] = param_pair[2]
+                                c_param_pair[1] .. "with value: " .. c_param_pair[2])
+                            Spring.Echo("Are you sure the parameter: "..c_param_pair[1].." was spelled correctly?")
+                            EVENT_BINDS[bound_event]["C_PARAMS"][c_param_pair[1]] = c_param_pair[2]
+                            -- print_table(EVENT_BINDS[bound_event]["C_PARAMS"],1)
                         end
                     end
+                    Spring.Echo("Command: "..bound_command.." has: "..#EVENT_BINDS[bound_event]["C_PARAMS"].." command parameters bound")
                 end
             end
         end
     end
+    Spring.Echo("Event binds table:")
+    print_table(EVENT_BINDS, 1)
 end
 
 local queuedCommands = {}
