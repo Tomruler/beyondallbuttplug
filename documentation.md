@@ -9,7 +9,7 @@ Published under GPL V2 License
 ## Tech Stack:
 - Data Source: Beyond All Reason engine
 - Data interpreter/exporter: Beyond All Reason Lua Widget
-- Client: TBD
+- Client: Tauri
 - Software interface: Buttplug.io API
 - Hardware communication: Intiface
 - Effector: Intiface-compatible vibrating device
@@ -31,11 +31,25 @@ Widgets consist of Lua code that hook into the Spring engine. They are extremely
 
 Language: Lua
 
-### Client:
+### Client: Tauri
 
 Not yet determined. This should be a lightweight app capable of accessing data provided by the Widget, display it to a simple GUI and communicate hardware instructions via the Buttplug.io framework (next section), such as vibration power and activation. This system needs to accept asynchronicity as well as handle many errors, such as constant disconnection of the vibrating devices, inconsistent in-game data, failure between these many moving parts etc. The current decision is between a local webapp or a desktop application; portability is currently not a concern for the project as this is just a proof of concept, though care should be taken to not make the system too platform dependent.
 
-Language: TBD
+UPDATE:
+Tauri is a lightweight Electron alternative for creating cross-platform applications. It uses Typescript/Javascript etc for frontend, and Rust for the backend. The Rust backend is important for this project as Buttplug.io is written natively in Rust; it supports other languages but there are tradeoffs/complications - I also just want to learn Rust.
+#### The client should be able to handle: 
+- File polling(in order to accept data from the BAR Lua Widget)
+- Data sanitization and interpretation into commands
+- Perform internal sums and calculations on the effects of these commands (to yield a single value per motor/component that can be passed to the hardware)
+- Communicate to the local Intiface server via the Buttplug API, as well as handle errors that occur
+- Gracefully handle errors at all steps of this process, including shutting off the end device in the event of a sudden crash or stop condition.
+#### The client should display:
+- The connection status/device
+- Any error states that have occured
+- A bar or other indicator of current motor values
+- Debug information
+
+Language: TypeScript+HTML/CSS frontend, Rust backend
 
 ### Software Interface:
 

@@ -9,18 +9,8 @@ function widget:GetInfo()
         enabled = false
     }
 end
-
--- Notes for next time:
--- Store commands and output as key-value pairs, where value is a list containing the command then the params
--- By default initialize the basic commands, as well as keep them in the default config file
--- Each command stored in the list should be a line including the frame-based timestamp, the client command and its params (not messing with JSON since that's a pain)
--- Make individual functions per command?
--- Diagnostics?
--- One way communication with client? (BAR write only, client read only?)
--- Maybe save old file each time - probably not
--- File stores entire history? - sure
--- Client time travel? What about pauses/dropped frames? Do frames scale with time dilation?
--- Test game sim stepping
+--Acknowledgements:
+--hihoman23: the "export data as csv" BAR widget, which served as the skeleton/reference for much of this code
 
 local globalPath = "LuaUI/Widgets/bpio/"
 local frameInterval = 10 -- in frames
@@ -180,6 +170,7 @@ local function load_binds()
 end
 
 local queuedCommands = {}
+--#region Old1
 -- local function createPlayerTable()
 --     for _, team in ipairs(teamList) do
 --         local playerName
@@ -202,7 +193,7 @@ local queuedCommands = {}
 --     if not file then return {} end
 
 -- end
-
+--#endregion
 local function append_queued_commands_to_file()
     local file = io.open(globalPath .. "cmdlog.txt", "a")
     if file then
@@ -215,7 +206,7 @@ local function append_queued_commands_to_file()
     end
 end
 
-
+--#region Old2
 -- local function checkLock()
 --     local file = io.open(globalPath.."lock.txt", "r")
 --     if file then
@@ -346,7 +337,7 @@ end
 --         end
 --     end
 -- end
-
+--#endregion
 local function format_command_string(commandFrame, commandName, commandParams)
     local assembled_command_string = commandFrame.." "
     assembled_command_string = assembled_command_string..commandName.." "
@@ -402,7 +393,7 @@ function widget:GameFrame(n)
     process_events(false)
     append_queued_commands_to_file()
 end
-
+--#region Old3
 -- local function createName()
 --     local mapName = Game.mapName
 --     local timeDate = os.date("%Y-%m-%d_%H-%M".."_"..mapName..".csv")
@@ -419,7 +410,7 @@ end
 --     tableToCSV(data, createName(), frame)
 --     Spring.Echo("Resource Data Saved")
 -- end
-
+--#endregion
 local function reset_event_file()
     local file = io.open(globalPath .. "cmdlog.txt", "w")
     if file then
