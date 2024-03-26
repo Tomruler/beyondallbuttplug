@@ -13,7 +13,8 @@ end
 --hihoman23: the "export data as csv" BAR widget, which served as the skeleton/reference for much of this code
 
 local globalPath = "LuaUI/Widgets/bpio/"
-local frameInterval = 10 -- in frames
+local frameInterval = 1 -- in frames
+local printInterval = 60 -- in frames
 -- local timeInterval = 10 -- in seconds, will get converted to frames later
 -- local ignoreList = {
 --     time = true,
@@ -187,6 +188,11 @@ local function load_binds()
     print_table(EVENT_BINDS, 1)
 end
 
+local function init_event_metrics()
+    bab_event_CurrentIntervalTime = 0
+    bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
+end
+
 local queuedCommands = {}
 --#region Old1
 -- local function createPlayerTable()
@@ -213,7 +219,10 @@ local queuedCommands = {}
 -- end
 --#endregion
 local function append_queued_commands_to_file()
-    local file = io.open(globalPath .. "cmdlog.txt", "a")
+    if #queuedCommands == 0 then return end
+    Spring.Echo(#queuedCommands .. " commands waiting to be written.")
+    local file, err = io.open(globalPath .. "cmdlog.txt", "a")
+    Spring.Echo(err)
     if file then
         for _, command in pairs(queuedCommands) do
             Spring.Echo("Writing to file: "..command)
@@ -379,17 +388,27 @@ end
 
 local function do_metrics()
     --Interval
-    bab_event_CurrentIntervalTime = bab_event_CurrentIntervalTime + frame - lastProcessedFrame
+    if EVENT_ENABLED["INTERVAL"] then
+        bab_event_CurrentIntervalTime = bab_event_CurrentIntervalTime + frame - lastProcessedFrame
+    end
+    if EVENT_ENABLED["ON_GET_KILL"] then
+    end
+    if EVENT_ENABLED["ON_BUILD_AFUS"] then
+    end
+    if EVENT_ENABLED["ON_COM_DAMAGED"] then
+    end
 end
 
 local function check_events()
     --Interval
-    if bab_event_CurrentIntervalTime >= bab_event_IntervalTime then
+    if EVENT_ENABLED["INTERVAL"] and bab_event_CurrentIntervalTime >= bab_event_IntervalTime then
         insert_bound_command(frame, "INTERVAL")
         Spring.Echo("Event: INTERVAL triggered on frame: "..frame)
         bab_event_CurrentIntervalTime = 0
-        bab_event_IntervalTime = math.floor((EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] + math.random()-0.5 * EVENT_BINDS["INTERVAL"]["PARAMS"]["Randomness"]) * 30)
+        bab_event_IntervalTime = math.floor((EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] + (math.random()-0.5) * EVENT_BINDS["INTERVAL"]["PARAMS"]["Randomness"]) * 30)
     end
+    -- insert_bound_command(frame, "INTERVAL")
+    -- Spring.Echo("Event: INTERVAL triggered on frame: "..frame)
 end
 
 local function process_events(force)
@@ -407,9 +426,12 @@ end
 
 function widget:GameFrame(n)
     frame = n
+    Spring.Echo("Frame: "..frame)
     -- teamCount = 0
     process_events(false)
-    append_queued_commands_to_file()
+    if frame % printInterval == 0 then
+        append_queued_commands_to_file()
+    end
 end
 --#region Old3
 -- local function createName()
@@ -430,7 +452,8 @@ end
 -- end
 --#endregion
 local function reset_event_file()
-    local file = io.open(globalPath .. "cmdlog.txt", "w")
+    local file, err = io.open(globalPath .. "cmdlog.txt", "w")
+    Spring.Echo(err)
     if file then
         file:close()
     else --not sure if this is necessary
@@ -445,6 +468,7 @@ function widget:Initialize()
     -- timeInterval = timeInterval*30
     widgetHandler:AddAction("emergency device stop", bab_reset, nil, "p")
     load_binds()
+    init_event_metrics()
     reset_event_file()
     isSpec = Spring.GetSpectatingState()
 end
@@ -457,4 +481,5 @@ end
 function widget:GameOver()
     -- saveData()
     insert_bound_command(frame, "ON_END")
+    append_queued_commands_to_file()
 end
