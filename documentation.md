@@ -9,7 +9,7 @@ Published under GPL V2 License
 ## Tech Stack:
 - Data Source: Beyond All Reason engine
 - Data interpreter/exporter: Beyond All Reason Lua Widget
-- Client: Tauri
+- Client: egui + eframe
 - Software interface: Buttplug.io API
 - Hardware communication: Intiface
 - Effector: Intiface-compatible vibrating device
@@ -31,12 +31,15 @@ Widgets consist of Lua code that hook into the Spring engine. They are extremely
 
 Language: Lua
 
-### Client: Tauri
+### Client: egui + eframe
 
 Not yet determined. This should be a lightweight app capable of accessing data provided by the Widget, display it to a simple GUI and communicate hardware instructions via the Buttplug.io framework (next section), such as vibration power and activation. This system needs to accept asynchronicity as well as handle many errors, such as constant disconnection of the vibrating devices, inconsistent in-game data, failure between these many moving parts etc. The current decision is between a local webapp or a desktop application; portability is currently not a concern for the project as this is just a proof of concept, though care should be taken to not make the system too platform dependent.
 
 UPDATE:
 Tauri is a lightweight Electron alternative for creating cross-platform applications. It uses Typescript/Javascript etc for frontend, and Rust for the backend. The Rust backend is important for this project as Buttplug.io is written natively in Rust; it supports other languages but there are tradeoffs/complications - I also just want to learn Rust.
+
+UPDATE 2:
+After consultation with the lead dev on the Buttplug.io team (qdot), egui has been suggested as a much lighter-weight and simple UI/client solution. The main advantages are that it's synchronous (async is extremely difficult to work with in Rust) and has its own 60/sec update loop, as well as being extremely easy to learn and use. egui is integrated into the eframe framework to provide a full application with GUI.
 #### The client should be able to handle: 
 - File polling(in order to accept data from the BAR Lua Widget)
 - Data sanitization and interpretation into commands

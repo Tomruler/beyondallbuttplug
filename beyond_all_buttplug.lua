@@ -52,7 +52,23 @@ local EVENT_BINDS = {
         ["PARAMS"] = {},
         ["COMMAND"] = "RESET",
         ["C_PARAMS"] = {}
+    },
+    ["ON_GET_KILL"] = {
+        ["PARAMS"] = {},
+        ["COMMAND"] = "VIBRATE",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
+    },
+    ["ON_BUILD_AFUS"] = {
+        ["PARAMS"] = {},
+        ["COMMAND"] = "VIBRATE",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
+    },
+    ["ON_COM_DAMAGED"] = {
+        ["PARAMS"] = {},
+        ["COMMAND"] = "VIBRATE",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
     }
+
 }
 local SUPPORTED_COMMANDS = {
     ["VIBRATE"] = true,
@@ -65,6 +81,9 @@ local EVENT_ENABLED =
     ["INTERVAL"] = true,
     ["ON_START"] = true,
     ["ON_END"] = true,
+    ["ON_GET_KILL"] = false,
+    ["ON_BUILD_AFUS"] = false,
+    ["ON_COM_DAMAGED"] = false,
 }
 
 local bab_event_CurrentIntervalTime = 0
@@ -119,9 +138,8 @@ local function load_binds()
                                 Spring.Echo("Invalid param when binding" .. bound_event)
                                 break
                             end
-                            local existing_param_name = EVENT_BINDS[bound_event]["PARAMS"][param_pair[1]]
-                            if existing_param_name then
-                                EVENT_BINDS[bound_event]["PARAMS"][existing_param_name] = param_pair[2]
+                            if EVENT_BINDS[bound_event]["PARAMS"][param_pair[1]] then
+                                EVENT_BINDS[bound_event]["PARAMS"][param_pair[1]] = param_pair[2]
                             else
                                 Spring.Echo("Binding new parameter: " .. param_pair[1] .. "with value: " .. param_pair
                                     [2])
