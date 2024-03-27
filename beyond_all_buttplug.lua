@@ -13,8 +13,8 @@ end
 --hihoman23: the "export data as csv" BAR widget, which served as the skeleton/reference for much of this code
 
 local globalPath = "LuaUI/Widgets/bpio/"
-local frameInterval = 1 -- in frames
-local printInterval = 60 -- in frames
+local frameInterval = 10 -- in frames
+local printInterval = 30 -- in frames
 -- local timeInterval = 10 -- in seconds, will get converted to frames later
 -- local ignoreList = {
 --     time = true,
@@ -426,7 +426,7 @@ end
 
 function widget:GameFrame(n)
     frame = n
-    Spring.Echo("Frame: "..frame)
+    -- Spring.Echo("Frame: "..frame)
     -- teamCount = 0
     process_events(false)
     if frame % printInterval == 0 then
@@ -480,6 +480,15 @@ end
 
 function widget:GameOver()
     -- saveData()
+    -- Spring.Echo("Game Over")
+    -- insert_bound_command(frame, "ON_END")
+    -- append_queued_commands_to_file()
+    -- Spring.Echo("Finished writing last commands to file")
+end
+
+function widget:Shutdown()
+    Spring.Echo("Game Over")
     insert_bound_command(frame, "ON_END")
     append_queued_commands_to_file()
+    Spring.Echo("Finished writing last commands to file")
 end
