@@ -1,0 +1,95 @@
+unitsReceived
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+energyExcess
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,712.5,712.5,
+1,1,InactiveAI(1),0,312.5,387.5,
+
+energyProduced
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,212.5,212.5,
+1,1,InactiveAI(1),0,312.5,387.5,
+
+unitsKilled
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+unitsSent
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+metalUsed
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+energySent
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+metalReceived
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+unitsDied
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,1,1,
+1,1,InactiveAI(1),0,0,0,
+
+metalProduced
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,17,17,
+1,1,InactiveAI(1),0,25,31,
+
+energyUsed
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+unitsCaptured
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+energyReceived
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+metalExcess
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,517,517,
+1,1,InactiveAI(1),0,25,31,
+
+unitsProduced
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,1,1,1,
+1,1,InactiveAI(1),1,1,1,
+
+damageDealt
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+metalSent
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+damageEfficiency
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+
+damageReceived
+AllyTeamID,TeamID,Player Name,0,0.25,0.31333333
+0,0,Player,0,0,0,
+1,1,InactiveAI(1),0,0,0,
+

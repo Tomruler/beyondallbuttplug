@@ -31,11 +31,11 @@ local isSpec
 
 
 
-local GetPlayerInfo = Spring.GetPlayerInfo
-local GetTeamStatsHistory = Spring.GetTeamStatsHistory
-local GetAIInfo = Spring.GetAIInfo
-local GetTeamInfo = Spring.GetTeamInfo
-local GetGaiaTeamID = Spring.GetGaiaTeamID
+local sp_GetPlayerInfo = Spring.GetPlayerInfo
+local sp_GetTeamStatsHistory = Spring.GetTeamStatsHistory
+local sp_GetAIInfo = Spring.GetAIInfo
+local sp_GetTeamInfo = Spring.GetTeamInfo
+local sp_GetGaiaTeamID = Spring.GetGaiaTeamID
 
 local playerTable = {}
 local EVENT_BINDS = {
@@ -57,17 +57,17 @@ local EVENT_BINDS = {
     ["ON_GET_KILL"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1, ["Duration"] = 0.1 }
     },
     ["ON_BUILD_AFUS"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.5, ["Duration"] = 3 }
     },
     ["ON_COM_DAMAGED"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 0.1 }
     }
 
 }
@@ -89,6 +89,13 @@ local EVENT_ENABLED =
 
 local bab_event_CurrentIntervalTime = 0
 local bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
+local bab_event_OldKills = 0
+local bab_event_CurrentKills = 0
+local bab_event_OldComHitpoints = 0
+local bab_event_CurrentComHitpoints = 0
+local bab_event_OldAfusCount = 0
+local bab_event_CurrentAfusCount = 0
+
 
 local function print_table(tbl, indent)
     indent = indent or 0
@@ -191,6 +198,12 @@ end
 local function init_event_metrics()
     bab_event_CurrentIntervalTime = 0
     bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
+    bab_event_OldKills = 0
+    bab_event_CurrentKills = 0
+    bab_event_OldComHitpoints = 0
+    bab_event_CurrentComHitpoints = 0
+    bab_event_OldAfusCount = 0
+    bab_event_CurrentAfusCount = 0
 end
 
 local queuedCommands = {}
@@ -386,16 +399,38 @@ local function insert_bound_command(commandFrame, eventName)
     queuedCommands[#queuedCommands+1] = format_command_string(commandFrame, commandName, commandParams)
 end
 
+local function bab_eventf_calc_kills()
+    --TODO: Get stats
+    return 0
+end
+local function bab_eventf_calc_afuses()
+    --TODO: Get stats
+    return 0
+end
+local function bab_eventf_calc_com_hitpoints()
+    --TODO: Get stats
+    return 0
+end
+
 local function do_metrics()
     --Interval
     if EVENT_ENABLED["INTERVAL"] then
         bab_event_CurrentIntervalTime = bab_event_CurrentIntervalTime + frame - lastProcessedFrame
     end
     if EVENT_ENABLED["ON_GET_KILL"] then
+        bab_event_CurrentKills = bab_eventf_calc_kills()
     end
     if EVENT_ENABLED["ON_BUILD_AFUS"] then
+        bab_event_CurrentAfusCount = bab_eventf_calc_afuses()
+        if bab_event_CurrentAfusCount < bab_event_OldAfusCount then
+            bab_event_OldAfusCount = bab_event_CurrentAfusCount
+        end
     end
     if EVENT_ENABLED["ON_COM_DAMAGED"] then
+        bab_event_CurrentComHitpoints = bab_eventf_calc_com_hitpoints()
+        if bab_event_CurrentComHitpoints > bab_event_OldComHitpoints then
+            bab_event_OldComHitpoints = bab_event_CurrentComHitpoints
+        end
     end
 end
 
@@ -407,8 +442,21 @@ local function check_events()
         bab_event_CurrentIntervalTime = 0
         bab_event_IntervalTime = math.floor((EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] + (math.random()-0.5) * EVENT_BINDS["INTERVAL"]["PARAMS"]["Randomness"]) * 30)
     end
-    -- insert_bound_command(frame, "INTERVAL")
-    -- Spring.Echo("Event: INTERVAL triggered on frame: "..frame)
+    if EVENT_ENABLED["ON_GET_KILL"] and bab_event_CurrentKills > bab_event_OldKills then
+        insert_bound_command(frame, "ON_GET_KILL")
+        Spring.Echo("Event: ON_GET_KILL triggered on frame: "..frame)
+        bab_event_OldKills = bab_event_CurrentKills
+    end
+    if EVENT_ENABLED["ON_BUILD_AFUS"] and bab_event_CurrentAfusCount > bab_event_OldAfusCount then
+        insert_bound_command(frame, "ON_BUILD_AFUS")
+        Spring.Echo("Event: ON_BUILD_AFUS triggered on frame: "..frame)
+        bab_event_OldAfusCount = bab_event_CurrentAfusCount
+    end
+    if EVENT_ENABLED["ON_COM_DAMAGED"] and bab_event_CurrentComHitpoints < bab_event_OldComHitpoints then
+        insert_bound_command(frame, "ON_COM_DAMAGED")
+        Spring.Echo("Event: ON_COM_DAMAGED triggered on frame: "..frame)
+        bab_event_OldComHitpoints = bab_event_CurrentComHitpoints
+    end
 end
 
 local function process_events(force)
@@ -420,7 +468,8 @@ local function process_events(force)
     end
 end
 
-local function bab_reset()
+local function bab_reset(fromAction)
+    Spring.Echo("Emergency Stop Triggered")
     insert_bound_command(frame, "ON_END")
 end
 
