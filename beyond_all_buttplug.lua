@@ -12,6 +12,8 @@ end
 --Acknowledgements:
 --hihoman23: the "export data as csv" BAR widget, which served as the skeleton/reference for much of this code
 
+local COM_ID
+
 local globalPath = "LuaUI/Widgets/bpio/"
 local frameInterval = 10 -- in frames
 local printInterval = 30 -- in frames
@@ -26,10 +28,11 @@ local printInterval = 30 -- in frames
 local frame = 0
 local lastProcessedFrame = 0
 local isSpec
--- local teamList = Spring.GetTeamList()
--- local teamCount = 0
+local teamList = Spring.GetTeamList()
+local teamCount = 0
 
-
+local corComDefID = UnitDefNames.corcom.id
+local armComDefID = UnitDefNames.armcom.id
 
 local sp_GetPlayerInfo = Spring.GetPlayerInfo
 local sp_GetTeamStatsHistory = Spring.GetTeamStatsHistory
@@ -37,6 +40,9 @@ local sp_GetAIInfo = Spring.GetAIInfo
 local sp_GetTeamInfo = Spring.GetTeamInfo
 local sp_GetGaiaTeamID = Spring.GetGaiaTeamID
 
+local userComID
+
+local userTeamID = Spring.GetLocalTeamID()
 local playerTable = {}
 local EVENT_BINDS = {
     ["INTERVAL"] = {
@@ -193,6 +199,25 @@ local function load_binds()
     end
     Spring.Echo("Event binds table:")
     print_table(EVENT_BINDS, 1)
+end
+
+local playerTable = {}
+local function createPlayerTable()
+    for _, team in ipairs(teamList) do
+        local playerName
+        local _, leader, _, ai = Spring.GetTeamInfo(team)
+        if leader then
+            if ai then
+                _, playerName = Spring.GetAIInfo(team)
+            else
+                playerName = Spring.GetPlayerInfo(leader)
+            end
+            if not playerName then
+                playerName = "Player Not Found"
+            end
+        end
+        playerTable[team] = playerName
+    end
 end
 
 local function init_event_metrics()
@@ -409,6 +434,9 @@ local function bab_eventf_calc_afuses()
 end
 local function bab_eventf_calc_com_hitpoints()
     --TODO: Get stats
+    if Spring.ValidUnitID(userComID) then
+        return Spring.GetUnitHealth(userComID)
+    end
     return 0
 end
 
@@ -481,6 +509,11 @@ function widget:GameFrame(n)
     if frame % printInterval == 0 then
         append_queued_commands_to_file()
     end
+    if frame % 600 == 0 then
+        
+        -- print_table(sp_GetTeamStatsHistory(0))
+    end
+    -- Spring.GetTeamUnitsByDefs(0, )
 end
 --#region Old3
 -- local function createName()
@@ -514,17 +547,53 @@ local function reset_event_file()
 end
 
 function widget:Initialize()
+    isSpec = Spring.GetSpectatingState()
+    if isSpec then
+        Spring.Echo("Spectator events are currently not supported.")
+        widgetHandler:RemoveWidget(self)
+        return
+    end
     -- timeInterval = timeInterval*30
     widgetHandler:AddAction("emergency device stop", bab_reset, nil, "p")
     load_binds()
     init_event_metrics()
     reset_event_file()
-    isSpec = Spring.GetSpectatingState()
+    
+    Spring.Echo("Team ID List:")
+    for _, teamID in ipairs(teamList) do
+        Spring.Echo("Team: ", teamID)
+    end
+    createPlayerTable()
+    print_table(playerTable, 1)
+    Spring.Echo("Arm commander UnitDefID: "..armComDefID)
+    Spring.Echo("Cor commander UnitDefID: "..corComDefID)
 end
 
 function widget:GameStart()
     -- createPlayerTable()
     insert_bound_command(0, "ON_START")
+    Spring.Echo("Looking for commanders")
+    -- jank, refactor and consider multi-com scenarios
+    local userComIDs = Spring.GetTeamUnitsByDefs(userTeamID, {armComDefID, corComDefID})
+    if userComIDs and #userComIDs > 0 then
+        userComID = userComIDs[1]
+        Spring.Echo("Commander unitID: "..userComID)
+        if Spring.ValidUnitID(userComID) then
+            Spring.Echo("[Commander info: ]")
+            print_table(
+                {
+                    health = Spring.GetUnitHealth(userComID),
+                    exp = Spring.GetUnitHealth(userComID),
+                },
+                1
+            )
+        else
+            Spring.Echo("Invalid commander unitID")
+        end
+    
+    else
+        Spring.Echo("No commanders found")
+    end
 end
 
 function widget:GameOver()
