@@ -1,3 +1,4 @@
+---@diagnostic disable: duplicate-set-field
 function widget:GetInfo()
     return {
         name = "Beyond All Buttplug",
@@ -17,14 +18,7 @@ local COM_ID
 local globalPath = "LuaUI/Widgets/bpio/"
 local frameInterval = 10 -- in frames
 local printInterval = 30 -- in frames
--- local timeInterval = 10 -- in seconds, will get converted to frames later
--- local ignoreList = {
---     time = true,
---     frame = true,
---     unitsOutCaptured = true
--- }
 
--- local data = {}
 local frame = 0
 local lastProcessedFrame = 0
 local isSpec
@@ -34,16 +28,16 @@ local teamCount = 0
 local corComDefID = UnitDefNames.corcom.id
 local armComDefID = UnitDefNames.armcom.id
 
-local sp_GetPlayerInfo = Spring.GetPlayerInfo
-local sp_GetTeamStatsHistory = Spring.GetTeamStatsHistory
-local sp_GetAIInfo = Spring.GetAIInfo
-local sp_GetTeamInfo = Spring.GetTeamInfo
-local sp_GetGaiaTeamID = Spring.GetGaiaTeamID
+-- local sp_GetPlayerInfo = Spring.GetPlayerInfo
+-- local sp_GetTeamStatsHistory = Spring.GetTeamStatsHistory
+-- local sp_GetAIInfo = Spring.GetAIInfo
+-- local sp_GetTeamInfo = Spring.GetTeamInfo
+-- local sp_GetGaiaTeamID = Spring.GetGaiaTeamID
 
 local userComID
 
 local userTeamID = Spring.GetLocalTeamID()
-local playerTable = {}
+-- local playerTable = {}
 local EVENT_BINDS = {
     ["INTERVAL"] = {
         ["PARAMS"] = { ["Interval"] = 10, ["Randomness"] = 2 },
