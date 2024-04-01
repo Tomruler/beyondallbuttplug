@@ -18,8 +18,8 @@ BAR widget documentation: bar_widget_docs.md
 Rust client documentation: client_docs.md
 
 Useful links:
-Intiface: https://intiface.com/central/
-Buttplug.io: https://buttplug.io/
-Buttplug.io git repo: https://github.com/buttplugio
-Beyond All Reason: https://www.beyondallreason.info/
-Beyond All Reason Discord: https://discord.gg/beyond-all-reason
+- Intiface: https://intiface.com/central/
+- Buttplug.io: https://buttplug.io/
+- Buttplug.io git repo: https://github.com/buttplugio
+- Beyond All Reason: https://www.beyondallreason.info/
+- Beyond All Reason Discord: https://discord.gg/beyond-all-reason
