@@ -1,6 +1,0 @@
-{
-    "Lua.diagnostics.globals": [
-        "Spring"
-    ],
-    "rust-analyzer.checkOnSave": false
-}

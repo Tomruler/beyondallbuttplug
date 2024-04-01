@@ -4,9 +4,11 @@ A Lua based modification (mod) integrated into the Beyond All Reason application
 ## Usage
 - Extract the "bab.zip" zip folder into your BAR installation, in the subdirectory Beyond-All-Reason\data\LuaUI\Widgets
 - The folder contains:
-- bab.lua: The mod folder
-- Place the bab.lua file inside
-- TODO
+- ``bpio/``: The mod's data folder
+- ``bpio/bab_binds.txt``: User configurable binding for event configuration
+- ``bpio/cmdlog.txt``: Contains each command sent to the Client for execution. The main way the Lua code communicates with the wider system.
+- ``bpio/bab_client.exe``: Client that interprets commands and provides debug/control features. Used to run the Buttplug.io library.
+- ``beyond_all_buttplug.lua``: The widget itself. Handles event binding, identifying events in game, and communicating commands to the client.
 
 ## Config File
 - Each bind consists of a BAR event followed by optional params, then a BAB event followed by optional params
@@ -17,13 +19,16 @@ BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - Invalid event binds are ignored and noted in the logs; duplicate binds overwrite the oldest. There is currently no support for multiple binds per event.
 
 ## Supported BAR Events
-- INTERVAL
-- ON_START
-- ON_END
+- [INTERVAL](#bar-event-interval)
+- [ON_START](#bar-event-on_start)
+- [ON_END](#bar-event-on_end)
+- [ON_BUILD_AFUS](#bar-event-on_build_afus)
+- [ON_GET_KILL](#bar-event-on_get_kill)
+- [ON_COM_DAMAGED](#bar-event-on_com_damaged)
 ## Supported BAB Events
-- VIBRATE
-- POWER
-- RESET
+- [VIBRATE](#bab-event-vibrate)
+- [POWER](#bab-event-power)
+- [RESET](#bab-event-reset)
 
 ### BAR EVENT: INTERVAL
 - Trigger once every time period, default 10 seconds (600 sim frames)
@@ -39,6 +44,18 @@ BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - Triggers at game end
 - Params: N/A
 
+### BAR EVENT: ON_BUILD_AFUS
+- Triggers once an advanced fusion reactor is completed by the player
+- Params: N/A
+
+### BAR EVENT: ON_GET_KILL
+- Triggers when the player's kill count increases
+- Params: N/A
+
+### BAR EVENT: ON_COM_DAMAGED
+- Triggers whenever the player's commander takes damage
+- Params: N/A
+
 ### BAB EVENT: VIBRATE
 - Enables one or more vibration motors on the connected device for a pulse. By default, it activates all motors at 20% power, falling off rapidly. 
 - NOTE: Vibration power stacks - multiple pulses close together/overlapping combine their output power. This can be toggled.
@@ -48,7 +65,7 @@ BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
     - Duration: Hold duration (how many seconds to vibrate at this power before falling off)
 
 ### BAB EVENT: POWER
-- Set the power of one or more vibration motors on the connected device permanantly. By default sets 10%.
+- Set the power of one or more vibration motors on the connected device permanantly (5 minutes). By default sets 10%.
 - Resets after receiving another POWER command with 0%
 - NOTE: Stacks with other vibration commands
 - Params:
