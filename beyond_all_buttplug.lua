@@ -28,6 +28,16 @@ local teamCount = 0
 local corComDefID = UnitDefNames.corcom.id
 local armComDefID = UnitDefNames.armcom.id
 
+local corAfusDefID = UnitDefNames.corafus.id
+local armAfusDefID = UnitDefNames.armafus.id
+
+local spamUnitDefIDs = {
+    ["tick"] = UnitDefNames.armflea.id,
+    ["pawn"] = UnitDefNames.armpw.id,
+    ["rover"] = UnitDefNames.armfav.id,
+    ["grunt"] = UnitDefNames.corak.id,
+    ["rascal"] = UnitDefNames.corfav.id,
+}
 -- local sp_GetPlayerInfo = Spring.GetPlayerInfo
 -- local sp_GetTeamStatsHistory = Spring.GetTeamStatsHistory
 -- local sp_GetAIInfo = Spring.GetAIInfo
@@ -87,6 +97,10 @@ local EVENT_ENABLED =
     ["ON_COM_DAMAGED"] = false,
 }
 
+local user_total_kills = 0
+local user_enemy_kill_counts = {}
+local user_kills_by_unit_type = {}
+
 local bab_event_CurrentIntervalTime = 0
 local bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
 local bab_event_OldKills = 0
@@ -94,7 +108,7 @@ local bab_event_CurrentKills = 0
 local bab_event_OldComHitpoints = 0
 local bab_event_CurrentComHitpoints = 0
 local bab_event_OldAfusCount = 0
-local bab_event_CurrentAfusCount = 0
+local bab_event_BuiltAfusCount = 0
 
 
 local function print_table(tbl, indent)
@@ -222,7 +236,7 @@ local function init_event_metrics()
     bab_event_OldComHitpoints = 0
     bab_event_CurrentComHitpoints = 0
     bab_event_OldAfusCount = 0
-    bab_event_CurrentAfusCount = 0
+    bab_event_BuiltAfusCount = 0
 end
 
 local queuedCommands = {}
@@ -263,15 +277,15 @@ local function insert_bound_command(commandFrame, eventName)
 end
 
 local function bab_eventf_calc_kills()
-    --TODO: Get stats
-    return 0
+    -- OLD: just here for convention
+    return user_total_kills
 end
+
 local function bab_eventf_calc_afuses()
-    --TODO: Get stats
-    return 0
+    -- OLD: just here for convention
+    return bab_event_BuiltAfusCount
 end
 local function bab_eventf_calc_com_hitpoints()
-    --TODO: Get stats
     if Spring.ValidUnitID(userComID) then
         return Spring.GetUnitHealth(userComID)
     end
@@ -287,9 +301,10 @@ local function do_metrics()
         bab_event_CurrentKills = bab_eventf_calc_kills()
     end
     if EVENT_ENABLED["ON_BUILD_AFUS"] then
-        bab_event_CurrentAfusCount = bab_eventf_calc_afuses()
-        if bab_event_CurrentAfusCount < bab_event_OldAfusCount then
-            bab_event_OldAfusCount = bab_event_CurrentAfusCount
+        bab_event_BuiltAfusCount = bab_eventf_calc_afuses()
+        -- this if statement is now obsolete; BuiltAfusCount can never go down
+        if bab_event_BuiltAfusCount < bab_event_OldAfusCount then
+            bab_event_OldAfusCount = bab_event_BuiltAfusCount
         end
     end
     if EVENT_ENABLED["ON_COM_DAMAGED"] then
@@ -313,10 +328,10 @@ local function check_events()
         Spring.Echo("Event: ON_GET_KILL triggered on frame: "..frame)
         bab_event_OldKills = bab_event_CurrentKills
     end
-    if EVENT_ENABLED["ON_BUILD_AFUS"] and bab_event_CurrentAfusCount > bab_event_OldAfusCount then
+    if EVENT_ENABLED["ON_BUILD_AFUS"] and bab_event_BuiltAfusCount > bab_event_OldAfusCount then
         insert_bound_command(frame, "ON_BUILD_AFUS")
         Spring.Echo("Event: ON_BUILD_AFUS triggered on frame: "..frame)
-        bab_event_OldAfusCount = bab_event_CurrentAfusCount
+        bab_event_OldAfusCount = bab_event_BuiltAfusCount
     end
     if EVENT_ENABLED["ON_COM_DAMAGED"] and bab_event_CurrentComHitpoints < bab_event_OldComHitpoints then
         insert_bound_command(frame, "ON_COM_DAMAGED")
@@ -337,6 +352,34 @@ end
 local function bab_reset(fromAction)
     Spring.Echo("Emergency Stop Triggered")
     insert_bound_command(frame, "ON_END")
+end
+
+function widget:UnitFinished(unitID, unitDefID, unitTeam)
+    -- Something built by player
+    if unitTeam == userTeamID then
+        if unitDefID == armAfusDefID or unitDefID == corAfusDefID then
+            bab_event_BuiltAfusCount = bab_event_BuiltAfusCount + 1
+        end
+    end
+end
+
+function widget:UnitDestroyed(unitID, unitDefID, unitTeam, attackerID, attackerDefID, attackerTeam)
+    -- TODO: Check if Gaia triggers this so random debris/trees aren't recorded
+    -- Player killed a unit
+    if attackerTeam == userTeamID then
+        user_total_kills = user_total_kills + 1
+        -- Add kill to overall player kills of a unit type
+        if not user_enemy_kill_counts[unitDefID] then
+            user_enemy_kill_counts[unitDefID] = 0
+        end
+        user_enemy_kill_counts[unitDefID] = user_enemy_kill_counts[unitDefID] + 1
+        -- Add kill to player's killcount by a specific unit
+        if not user_kills_by_unit_type[attackerDefID] then
+            user_kills_by_unit_type[attackerDefID] = 0
+        end
+        user_kills_by_unit_type[attackerDefID] = user_kills_by_unit_type[attackerDefID] + 1
+    end
+    -- Don't care about other kills
 end
 
 function widget:GameFrame(n)
