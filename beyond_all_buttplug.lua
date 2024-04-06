@@ -16,8 +16,8 @@ end
 local COM_ID
 
 local globalPath = "LuaUI/Widgets/bpio/"
-local frameInterval = 10 -- in frames
-local printInterval = 30 -- in frames
+local frameInterval = 1 -- in frames
+local printInterval = 2 -- in frames
 
 local frame = 0
 local lastProcessedFrame = 0
@@ -69,6 +69,11 @@ local EVENT_BINDS = {
         ["COMMAND"] = "VIBRATE",
         ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1, ["Duration"] = 0.1 }
     },
+    ["ON_LOSE_UNIT"] = {
+        ["PARAMS"] = {},
+        ["COMMAND"] = "VIBRATE",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1, ["Duration"] = 0.1 }
+    },
     ["ON_BUILD_AFUS"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
@@ -81,23 +86,27 @@ local EVENT_BINDS = {
     }
 
 }
+
+-- Commands recognized by the BAB client. Unsupported commands won't crash the client, but won't do anything either
 local SUPPORTED_COMMANDS = {
     ["VIBRATE"] = true,
     ["POWER"] = true,
     ["RESET"] = true
 }
-
+-- Enabled by default. Binding events also enables them
 local EVENT_ENABLED = 
 {
-    ["INTERVAL"] = true,
-    ["ON_START"] = true,
+    ["INTERVAL"] = false,
+    ["ON_START"] = false,
     ["ON_END"] = true,
     ["ON_GET_KILL"] = false,
+    ["ON_LOSE_UNIT"] = false,
     ["ON_BUILD_AFUS"] = false,
     ["ON_COM_DAMAGED"] = false,
 }
 
 local user_total_kills = 0
+local user_total_losses = 0
 local user_enemy_kill_counts = {}
 local user_kills_by_unit_type = {}
 
@@ -105,6 +114,8 @@ local bab_event_CurrentIntervalTime = 0
 local bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
 local bab_event_OldKills = 0
 local bab_event_CurrentKills = 0
+local bab_event_OldLosses = 0
+local bab_event_CurrentLosses = 0
 local bab_event_OldComHitpoints = 0
 local bab_event_CurrentComHitpoints = 0
 local bab_event_OldAfusCount = 0
@@ -281,6 +292,11 @@ local function bab_eventf_calc_kills()
     return user_total_kills
 end
 
+local function bab_eventf_calc_losses()
+    -- OLD: just here for convention
+    return user_total_losses
+end
+
 local function bab_eventf_calc_afuses()
     -- OLD: just here for convention
     return bab_event_BuiltAfusCount
@@ -293,12 +309,18 @@ local function bab_eventf_calc_com_hitpoints()
 end
 
 local function do_metrics()
+    local killed,died, _, _, _, _ = Spring.GetTeamUnitStats (userTeamID)
+    user_total_kills = killed
+    user_total_losses = died
     --Interval
     if EVENT_ENABLED["INTERVAL"] then
         bab_event_CurrentIntervalTime = bab_event_CurrentIntervalTime + frame - lastProcessedFrame
     end
     if EVENT_ENABLED["ON_GET_KILL"] then
         bab_event_CurrentKills = bab_eventf_calc_kills()
+    end
+    if EVENT_ENABLED["ON_LOSE_UNIT"] then
+        bab_event_CurrentLosses = bab_eventf_calc_losses()
     end
     if EVENT_ENABLED["ON_BUILD_AFUS"] then
         bab_event_BuiltAfusCount = bab_eventf_calc_afuses()
@@ -327,6 +349,11 @@ local function check_events()
         insert_bound_command(frame, "ON_GET_KILL")
         Spring.Echo("Event: ON_GET_KILL triggered on frame: "..frame)
         bab_event_OldKills = bab_event_CurrentKills
+    end
+    if EVENT_ENABLED["ON_LOSE_UNIT"] and bab_event_CurrentLosses > bab_event_OldLosses then
+        insert_bound_command(frame, "ON_LOSE_UNIT")
+        Spring.Echo("Event: ON_LOSE_UNIT triggered on frame: "..frame)
+        bab_event_OldLosses = bab_event_CurrentLosses
     end
     if EVENT_ENABLED["ON_BUILD_AFUS"] and bab_event_BuiltAfusCount > bab_event_OldAfusCount then
         insert_bound_command(frame, "ON_BUILD_AFUS")
@@ -364,22 +391,60 @@ function widget:UnitFinished(unitID, unitDefID, unitTeam)
 end
 
 function widget:UnitDestroyed(unitID, unitDefID, unitTeam, attackerID, attackerDefID, attackerTeam)
-    -- TODO: Check if Gaia triggers this so random debris/trees aren't recorded
-    -- Player killed a unit
-    if attackerTeam == userTeamID then
-        user_total_kills = user_total_kills + 1
-        -- Add kill to overall player kills of a unit type
-        if not user_enemy_kill_counts[unitDefID] then
-            user_enemy_kill_counts[unitDefID] = 0
-        end
-        user_enemy_kill_counts[unitDefID] = user_enemy_kill_counts[unitDefID] + 1
-        -- Add kill to player's killcount by a specific unit
-        if not user_kills_by_unit_type[attackerDefID] then
-            user_kills_by_unit_type[attackerDefID] = 0
-        end
-        user_kills_by_unit_type[attackerDefID] = user_kills_by_unit_type[attackerDefID] + 1
-    end
-    -- Don't care about other kills
+    -- if unitTeam then
+    --     if unitTeam == userTeamID then
+    --         Spring.Echo("Your unit just died")
+    --         user_total_losses = user_total_losses + 1
+    --     end
+    -- end
+    
+    -- if not unitDefID then
+    --     Spring.Echo("Something died without a unitDefID")
+    --     return
+    -- end
+    -- if not attackerTeam then
+    --     Spring.Echo(UnitDefs[unitDefID].name .. "was killed by unknown team")
+    -- end
+    -- if not attackerDefID then
+    --     Spring.Echo("Attacker def unknown")
+    -- end
+    -- if attackerID then
+    --     Spring.Echo(attackerID.." got a kill")
+    --     local teamUnitTable = Spring.GetTeamUnits(userTeamID)
+    --     if teamUnitTable then
+    --         if teamUnitTable[attackerID] then
+    --             Spring.Echo("This is your unit")
+    --         end
+            
+    --     end
+    -- else
+    --     Spring.Echo("AttackerID missing as well")
+    -- end
+    -- if not attackerTeam or not unitDefID or not attackerDefID then
+    --     return
+    -- end
+    -- -- TODO: Check if Gaia triggers this so random debris/trees aren't recorded
+    -- -- Player killed a unit
+    -- Spring.Echo("Unit has died. Killed by team: "..attackerTeam)
+    -- if attackerTeam == userTeamID then
+    --     user_total_kills = user_total_kills + 1
+    --     Spring.Echo("Player has: "..user_total_kills.. " kills")
+    --     if not attackerDefID then
+    --         Spring.Echo("An unknown player unit killed a"..UnitDefs[unitDefID].name)
+    --         return 
+    --     end
+    --     -- Add kill to overall player kills of a unit type
+    --     if not user_enemy_kill_counts[unitDefID] then
+    --         user_enemy_kill_counts[unitDefID] = 0
+    --     end
+    --     user_enemy_kill_counts[unitDefID] = user_enemy_kill_counts[unitDefID] + 1
+    --     -- Add kill to player's killcount by a specific unit
+    --     if not user_kills_by_unit_type[attackerDefID] then
+    --         user_kills_by_unit_type[attackerDefID] = 0
+    --     end
+    --     user_kills_by_unit_type[attackerDefID] = user_kills_by_unit_type[attackerDefID] + 1
+    -- end
+    -- -- Don't care about other kills
 end
 
 function widget:GameFrame(n)

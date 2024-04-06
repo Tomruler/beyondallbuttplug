@@ -1,3 +1,5 @@
+BIND INTERVAL Interval:10 Randomness:0
+TO VIBRATE Motor:-1 Strength:0.2 Duration:1
 BIND ON_START
 TO VIBRATE Motor:-1 Strength:0.2 Duration:5
 BIND ON_END

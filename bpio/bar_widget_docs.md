@@ -14,21 +14,25 @@ A Lua based modification (mod) integrated into the Beyond All Reason application
 - Each bind consists of a BAR event followed by optional params, then a BAB event followed by optional params
 - BAR events are mapped to things happening in game, BAB events are interpreted by the Client as commands for the connected vibrators/other devices
 - The format is: \
-BAR_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE \
-BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
+BIND BAR_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE \
+TO BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - Invalid event binds are ignored and noted in the logs; duplicate binds overwrite the oldest. There is currently no support for multiple binds per event.
 
 ## Supported BAR Events
-- [INTERVAL](#bar-event-interval)
-- [ON_START](#bar-event-on_start)
-- [ON_END](#bar-event-on_end)
-- [ON_BUILD_AFUS](#bar-event-on_build_afus)
-- [ON_GET_KILL](#bar-event-on_get_kill)
-- [ON_COM_DAMAGED](#bar-event-on_com_damaged)
+- (✅: Working,🛠️: Experimental ❌: Not working)
+- [INTERVAL](#bar-event-interval)✅
+- [ON_START](#bar-event-on_start)✅
+- [ON_END](#bar-event-on_end)✅
+- [ON_BUILD_AFUS](#bar-event-on_build_afus)✅
+- [ON_GET_KILL](#bar-event-on_get_kill)✅
+- [ON_LOSE_UNIT](#bar-event-on_lose_unit)🛠️
+- [ON_COM_DAMAGED](#bar-event-on_com_damaged)✅
 ## Supported BAB Events
-- [VIBRATE](#bab-event-vibrate)
-- [POWER](#bab-event-power)
-- [RESET](#bab-event-reset)
+- [VIBRATE](#bab-event-vibrate)✅
+- [POWER](#bab-event-power)✅
+- [RESET](#bab-event-reset)✅
+
+# BAR EVENTS
 
 ### BAR EVENT: INTERVAL
 - Trigger once every time period, default 10 seconds (600 sim frames)
@@ -52,9 +56,15 @@ BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - Triggers when the player's kill count increases
 - Params: N/A
 
+### BAR EVENT: ON_LOSE_UNIT
+- Triggers when the player loses a unit. Currently includes reclaimed units and unbuilt structures.
+- Params: N/A
+
 ### BAR EVENT: ON_COM_DAMAGED
 - Triggers whenever the player's commander takes damage
 - Params: N/A
+
+# BAB EVENTS
 
 ### BAB EVENT: VIBRATE
 - Enables one or more vibration motors on the connected device for a pulse. By default, it activates all motors at 20% power, falling off rapidly. 
