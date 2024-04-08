@@ -377,7 +377,7 @@ local function check_events()
     end
     if EVENT_ENABLED["ON_COM_DAMAGED"] and bab_event_CurrentComHitpoints < bab_event_OldComHitpoints then
         insert_bound_command(frame, "ON_COM_DAMAGED", 
-            (bab_event_CurrentComHitpoints - bab_event_OldComHitpoints)/EVENT_BINDS["ON_COM_DAMAGED"]["QUANTITY_PER_SCALE_FACTOR"])
+            (bab_event_OldComHitpoints - bab_event_CurrentComHitpoints)/EVENT_BINDS["ON_COM_DAMAGED"]["QUANTITY_PER_SCALE_FACTOR"])
         Spring.Echo("Event: ON_COM_DAMAGED triggered on frame: "..frame)
         bab_event_OldComHitpoints = bab_event_CurrentComHitpoints
     end
