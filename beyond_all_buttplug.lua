@@ -52,12 +52,14 @@ local EVENT_BINDS = {
     ["INTERVAL"] = {
         ["PARAMS"] = { ["Interval"] = 10, ["Randomness"] = 2 },
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 1 },
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1, ["Duration"] = 1}
     },
     ["ON_START"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 5 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 5 },
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
     },
     ["ON_END"] = {
         ["PARAMS"] = {},
@@ -67,22 +69,27 @@ local EVENT_BINDS = {
     ["ON_GET_KILL"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1, ["Duration"] = 0.1 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1, ["Duration"] = 0.1 },
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
     },
     ["ON_LOSE_UNIT"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1, ["Duration"] = 0.1 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1, ["Duration"] = 0.1 },
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
     },
     ["ON_BUILD_AFUS"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.5, ["Duration"] = 3 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.5, ["Duration"] = 3 },
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
     },
     ["ON_COM_DAMAGED"] = {
         ["PARAMS"] = {},
         ["COMMAND"] = "VIBRATE",
-        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 0.1 }
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 0.1 },
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
+        ["QUANTITY_PER_SCALE_FACTOR"] = 100
     }
 
 }
@@ -266,25 +273,33 @@ local function append_queued_commands_to_file()
     end
 end
 
-local function format_command_string(commandFrame, commandName, commandParams)
+local function format_command_string(commandFrame, commandName, commandParams, scaling_factor, scaled_params)
+    scaling_factor = scaling_factor or 1
+    scaled_params = scaled_params or {}
     local assembled_command_string = commandFrame.." "
     assembled_command_string = assembled_command_string..commandName.." "
     if commandParams then
         for c_paramk, c_paramv in pairs(commandParams) do
+            -- scale relevant parameters
+            if scaled_params[c_paramk] then
+                c_paramv = c_paramv * scaling_factor
+            end
             assembled_command_string = assembled_command_string..c_paramk..":"..c_paramv.." "
         end
     end
     return string.sub(assembled_command_string, 1, #assembled_command_string-1)
 end
 
-local function insert_bound_command(commandFrame, eventName)
+local function insert_bound_command(commandFrame, eventName, scaling_factor)
+    scaling_factor = scaling_factor or 1
     local commandName = EVENT_BINDS[eventName]["COMMAND"]
     if not commandName then
         Spring.Echo("No command bound to event: "..eventName)
         return nil 
     end
     local commandParams = EVENT_BINDS[eventName]["C_PARAMS"]
-    queuedCommands[#queuedCommands+1] = format_command_string(commandFrame, commandName, commandParams)
+    local scaled_params = EVENT_BINDS[eventName]["C_PARAMS_SCALED"] or {}
+    queuedCommands[#queuedCommands+1] = format_command_string(commandFrame, commandName, commandParams, scaling_factor, scaled_params)
 end
 
 local function bab_eventf_calc_kills()
@@ -346,22 +361,23 @@ local function check_events()
         bab_event_IntervalTime = math.floor((EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] + (math.random()-0.5) * EVENT_BINDS["INTERVAL"]["PARAMS"]["Randomness"]) * 30)
     end
     if EVENT_ENABLED["ON_GET_KILL"] and bab_event_CurrentKills > bab_event_OldKills then
-        insert_bound_command(frame, "ON_GET_KILL")
+        insert_bound_command(frame, "ON_GET_KILL", bab_event_CurrentKills - bab_event_OldKills)
         Spring.Echo("Event: ON_GET_KILL triggered on frame: "..frame)
         bab_event_OldKills = bab_event_CurrentKills
     end
     if EVENT_ENABLED["ON_LOSE_UNIT"] and bab_event_CurrentLosses > bab_event_OldLosses then
-        insert_bound_command(frame, "ON_LOSE_UNIT")
+        insert_bound_command(frame, "ON_LOSE_UNIT", bab_event_CurrentLosses - bab_event_OldLosses)
         Spring.Echo("Event: ON_LOSE_UNIT triggered on frame: "..frame)
         bab_event_OldLosses = bab_event_CurrentLosses
     end
     if EVENT_ENABLED["ON_BUILD_AFUS"] and bab_event_BuiltAfusCount > bab_event_OldAfusCount then
-        insert_bound_command(frame, "ON_BUILD_AFUS")
+        insert_bound_command(frame, "ON_BUILD_AFUS", bab_event_BuiltAfusCount - bab_event_OldAfusCount)
         Spring.Echo("Event: ON_BUILD_AFUS triggered on frame: "..frame)
         bab_event_OldAfusCount = bab_event_BuiltAfusCount
     end
     if EVENT_ENABLED["ON_COM_DAMAGED"] and bab_event_CurrentComHitpoints < bab_event_OldComHitpoints then
-        insert_bound_command(frame, "ON_COM_DAMAGED")
+        insert_bound_command(frame, "ON_COM_DAMAGED", 
+            (bab_event_CurrentComHitpoints - bab_event_OldComHitpoints)/EVENT_BINDS["ON_COM_DAMAGED"]["QUANTITY_PER_SCALE_FACTOR"])
         Spring.Echo("Event: ON_COM_DAMAGED triggered on frame: "..frame)
         bab_event_OldComHitpoints = bab_event_CurrentComHitpoints
     end
