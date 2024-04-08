@@ -345,6 +345,7 @@ local function do_metrics()
         end
     end
     if EVENT_ENABLED["ON_COM_DAMAGED"] then
+        -- TODO: Rebind commander if they died and were revived/gifted.
         bab_event_CurrentComHitpoints = bab_eventf_calc_com_hitpoints()
         if bab_event_CurrentComHitpoints > bab_event_OldComHitpoints then
             bab_event_OldComHitpoints = bab_event_CurrentComHitpoints
@@ -514,11 +515,7 @@ function widget:Initialize()
     Spring.Echo("Cor commander UnitDefID: "..corComDefID)
 end
 
-function widget:GameStart()
-    -- createPlayerTable()
-    insert_bound_command(0, "ON_START")
-    Spring.Echo("Looking for commanders")
-    -- jank, refactor and consider multi-com scenarios
+local function bind_user_commander()
     local userComIDs = Spring.GetTeamUnitsByDefs(userTeamID, {armComDefID, corComDefID})
     if userComIDs and #userComIDs > 0 then
         userComID = userComIDs[1]
@@ -539,6 +536,14 @@ function widget:GameStart()
     else
         Spring.Echo("No commanders found")
     end
+end
+
+function widget:GameStart()
+    -- createPlayerTable()
+    insert_bound_command(0, "ON_START")
+    Spring.Echo("Looking for commanders")
+    -- jank, refactor and consider multi-com scenarios
+    bind_user_commander()
 end
 
 function widget:GameOver()
