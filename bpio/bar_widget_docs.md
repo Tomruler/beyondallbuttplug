@@ -25,8 +25,15 @@ TO BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - [ON_END](#bar-event-on_end)✅
 - [ON_BUILD_AFUS](#bar-event-on_build_afus)✅
 - [ON_GET_KILL](#bar-event-on_get_kill)✅
-- [ON_LOSE_UNIT](#bar-event-on_lose_unit)🛠️
+- [ON_LOSE_UNIT](#bar-event-on_lose_unit)✅
 - [ON_COM_DAMAGED](#bar-event-on_com_damaged)✅
+- [STALLING_METAL](#bar-event-stalling_metal)❌
+- [FLOATING_METAL](#bar-event-floating_metal)❌
+- [STALLING_ENERGY](#bar-event-stalling_energy)❌
+- [FLOATING_ENERGY](#bar-event-floating_energy)❌
+- [SCREEN_SHAKE](#bar-event-screen-shake)❌
+- [COM_GAIN_XP](#bar-event-com_gain_xp)❌
+- [RECEIVED_T2_CON](#bar-event-received_t2_con)❌
 ## Supported BAB Events
 - [VIBRATE](#bab-event-vibrate)✅
 - [POWER](#bab-event-power)✅
@@ -64,6 +71,39 @@ TO BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - Triggers whenever the player's commander takes damage
 - Params: N/A
 
+### BAR EVENT: STALLING_METAL
+- Triggers when the player's stored metal falls below a proportion of capacity
+- Params:
+    - Proportion: Proportion of total metal capacity -> Default 0.01
+
+### BAR EVENT: FLOATING_METAL
+- Triggers when the player's stored metal goes above a proportion of capacity
+- Params:
+    - Proportion: Proportion of total metal capacity -> Default 0.95
+
+### BAR EVENT: STALLING_ENERGY
+- Triggers when the player's stored energy falls below a proportion of capacity
+- Params:
+    - Proportion: Proportion of total energy capacity -> Default 0.05
+
+### BAR EVENT: FLOATING_ENERGY
+- Triggers when the player's stored energy goes above a proportion of capacity
+- Params:
+    - Proportion: Proportion of total energy capacity -> Default 0.98
+
+### BAR EVENT: SCREEN SHAKE
+- Triggers when the screen shakes above a certain threshold
+- Params:
+    - Shake_Threshold: Quantity of shaking needed to trigger this event -> Default UNKNOWN
+
+### BAR EVENT: COM_GAIN_XP
+- Triggers when the com gains XP
+- Params: N/A
+
+### BAR EVENT: RECEIVED_T2_CON
+- Triggers when an ally gives you a T2 con
+- Params: N/A
+
 # BAB EVENTS
 
 ### BAB EVENT: VIBRATE
@@ -77,6 +117,7 @@ TO BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 ### BAB EVENT: POWER
 - Set the power of one or more vibration motors on the connected device permanantly (5 minutes). By default sets 10%.
 - Resets after receiving another POWER command with 0%
+- Cancels all other ongoing power events when recieved.
 - NOTE: Stacks with other vibration commands
 - Params:
     - Motor: Which Motor (-1 for all, 0 for 1st, 1 for 2nd etc)
