@@ -111,17 +111,17 @@ TO BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - NOTE: Vibration power stacks - multiple pulses close together/overlapping combine their output power. This can be toggled.
 - Params:
     - Motor: Which Motor (-1 for all, 0 for 1st, 1 for 2nd etc)
-    - Strength: Strength (between 0 and 1, floating point)
+    - Strength: Strength (between -1 and 1, floating point)
     - Duration: Hold duration (how many seconds to vibrate at this power before falling off)
 
 ### BAB EVENT: POWER
 - Set the power of one or more vibration motors on the connected device permanantly (5 minutes). By default sets 10%.
-- Resets after receiving another POWER command with 0%
-- Cancels all other ongoing power events when recieved.
+- Cancel out power events by providing a power event with negative strength.
+- Resets all ongoing power events after receiving a POWER command with a strength of 0%
 - NOTE: Stacks with other vibration commands
 - Params:
     - Motor: Which Motor (-1 for all, 0 for 1st, 1 for 2nd etc)
-    - Strength: Strength (between 0 and 1, floating point)
+    - Strength: Strength (between -1 and 1, floating point)
 
 ### BAB EVENT: RESET
 - Disables all motors and clears any queued/ongoing events. Useful as an emergency shut-off.

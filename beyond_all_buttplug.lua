@@ -90,7 +90,31 @@ local EVENT_BINDS = {
         ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.2, ["Duration"] = 0.1 },
         ["C_PARAMS_SCALED"] = {["Strength"] = 1},
         ["QUANTITY_PER_SCALE_FACTOR"] = 100
-    }
+    },
+    ["STALLING_METAL"] = {
+        ["PARAMS"] = {["Proportion"] = 0.01},
+        ["COMMAND"] = "POWER",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1},
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
+    },
+    ["FLOATING_METAL"] = {
+        ["PARAMS"] = {["Proportion"] = 0.95},
+        ["COMMAND"] = "POWER",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1},
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
+    },
+    ["STALLING_ENERGY"] = {
+        ["PARAMS"] = {["Proportion"] = 0.05},
+        ["COMMAND"] = "POWER",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1},
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
+    },
+    ["FLOATING_ENERGY"] = {
+        ["PARAMS"] = {["Proportion"] = 0.98},
+        ["COMMAND"] = "POWER",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1},
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
+    },
 
 }
 
@@ -98,7 +122,8 @@ local EVENT_BINDS = {
 local SUPPORTED_COMMANDS = {
     ["VIBRATE"] = true,
     ["POWER"] = true,
-    ["RESET"] = true
+    ["RESET"] = true,
+    ["STROKE"] = false,
 }
 -- Enabled by default. Binding events also enables them
 local EVENT_ENABLED = 
@@ -110,12 +135,16 @@ local EVENT_ENABLED =
     ["ON_LOSE_UNIT"] = false,
     ["ON_BUILD_AFUS"] = false,
     ["ON_COM_DAMAGED"] = false,
+    ["STALLING_METAL"] = false,
+    ["FLOATING_METAL"] = false,
+    ["STALLING_ENERGY"] = false,
+    ["FLOATING_ENERGY"] = false,
 }
 
 local user_total_kills = 0
 local user_total_losses = 0
-local user_enemy_kill_counts = {}
-local user_kills_by_unit_type = {}
+-- local user_enemy_kill_counts = {}
+-- local user_kills_by_unit_type = {}
 
 local bab_event_CurrentIntervalTime = 0
 local bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
@@ -127,6 +156,16 @@ local bab_event_OldComHitpoints = 0
 local bab_event_CurrentComHitpoints = 0
 local bab_event_OldAfusCount = 0
 local bab_event_BuiltAfusCount = 0
+local bab_event_current_metal_ratio = 0
+local bab_event_current_energy_ratio = 0
+local bab_eventc_metal_stall_ratio = 0.01
+local bab_eventc_metal_float_ratio = 0.95
+local bab_eventc_energy_stall_ratio = 0.05
+local bab_eventc_energy_float_ratio = 0.98
+local bab_event_stalling_metal = false
+local bab_event_floating_metal = false
+local bab_event_stalling_energy = false
+local bab_event_floating_energy = false
 
 
 local function print_table(tbl, indent)
@@ -255,6 +294,16 @@ local function init_event_metrics()
     bab_event_CurrentComHitpoints = 0
     bab_event_OldAfusCount = 0
     bab_event_BuiltAfusCount = 0
+    bab_event_current_metal_ratio = 0
+    bab_event_current_energy_ratio = 0
+    bab_eventc_metal_stall_ratio = EVENT_BINDS["STALLING_METAL"]["PARAMS"]["Proportion"] or 0.01
+    bab_eventc_metal_float_ratio = EVENT_BINDS["FLOATING_METAL_METAL"]["PARAMS"]["Proportion"] or 0.95
+    bab_eventc_energy_stall_ratio = EVENT_BINDS["STALLING_ENERGY"]["PARAMS"]["Proportion"] or 0.05
+    bab_eventc_energy_float_ratio = EVENT_BINDS["FLOATING_ENERGY"]["PARAMS"]["Proportion"] or 0.98
+    bab_event_stalling_metal = false
+    bab_event_floating_metal = false
+    bab_event_stalling_energy = false
+    bab_event_floating_energy = false
 end
 
 local queuedCommands = {}
@@ -323,6 +372,22 @@ local function bab_eventf_calc_com_hitpoints()
     return 0
 end
 
+local function bab_eventf_calc_user_metal_ratio()
+    local currentMetal, storageCapacity, _, _, _, _, _, _ = Spring.GetTeamResources(userTeamID, "metal")
+    if storageCapacity and not storageCapacity == 0 then
+        return currentMetal / storageCapacity
+    end
+    return 0
+end
+
+local function bab_eventf_calc_user_energy_ratio()
+    local currentEnergy, storageCapacity, _, _, _, _, _, _ = Spring.GetTeamResources(userTeamID, "energy")
+    if storageCapacity and not storageCapacity == 0 then
+        return currentEnergy / storageCapacity
+    end
+    return 0
+end
+
 local function do_metrics()
     local killed,died, _, _, _, _ = Spring.GetTeamUnitStats (userTeamID)
     user_total_kills = killed
@@ -351,36 +416,110 @@ local function do_metrics()
             bab_event_OldComHitpoints = bab_event_CurrentComHitpoints
         end
     end
+    if EVENT_ENABLED["STALLING_METAL"] or EVENT_ENABLED["FLOATING_METAL"] then
+        bab_event_current_metal_ratio = bab_eventf_calc_user_metal_ratio()
+    end
+    if EVENT_ENABLED["STALLING_ENERGY"] or EVENT_ENABLED["FLOATING_ENERGY"] then
+        bab_event_current_energy_ratio = bab_eventf_calc_user_energy_ratio()
+    end
 end
 
 local function check_events()
-    --Interval
+    -- Interval
     if EVENT_ENABLED["INTERVAL"] and bab_event_CurrentIntervalTime >= bab_event_IntervalTime then
         insert_bound_command(frame, "INTERVAL")
         Spring.Echo("Event: INTERVAL triggered on frame: "..frame)
         bab_event_CurrentIntervalTime = 0
         bab_event_IntervalTime = math.floor((EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] + (math.random()-0.5) * EVENT_BINDS["INTERVAL"]["PARAMS"]["Randomness"]) * 30)
     end
+    -- Getting kills
     if EVENT_ENABLED["ON_GET_KILL"] and bab_event_CurrentKills > bab_event_OldKills then
         insert_bound_command(frame, "ON_GET_KILL", bab_event_CurrentKills - bab_event_OldKills)
         Spring.Echo("Event: ON_GET_KILL triggered on frame: "..frame)
         bab_event_OldKills = bab_event_CurrentKills
     end
+    -- Losing units/structures
     if EVENT_ENABLED["ON_LOSE_UNIT"] and bab_event_CurrentLosses > bab_event_OldLosses then
         insert_bound_command(frame, "ON_LOSE_UNIT", bab_event_CurrentLosses - bab_event_OldLosses)
         Spring.Echo("Event: ON_LOSE_UNIT triggered on frame: "..frame)
         bab_event_OldLosses = bab_event_CurrentLosses
     end
+    -- Finishing an AFUS
     if EVENT_ENABLED["ON_BUILD_AFUS"] and bab_event_BuiltAfusCount > bab_event_OldAfusCount then
         insert_bound_command(frame, "ON_BUILD_AFUS", bab_event_BuiltAfusCount - bab_event_OldAfusCount)
         Spring.Echo("Event: ON_BUILD_AFUS triggered on frame: "..frame)
         bab_event_OldAfusCount = bab_event_BuiltAfusCount
     end
+    -- Com losing HP
     if EVENT_ENABLED["ON_COM_DAMAGED"] and bab_event_CurrentComHitpoints < bab_event_OldComHitpoints then
         insert_bound_command(frame, "ON_COM_DAMAGED", 
             (bab_event_OldComHitpoints - bab_event_CurrentComHitpoints)/EVENT_BINDS["ON_COM_DAMAGED"]["QUANTITY_PER_SCALE_FACTOR"])
         Spring.Echo("Event: ON_COM_DAMAGED triggered on frame: "..frame)
         bab_event_OldComHitpoints = bab_event_CurrentComHitpoints
+    end
+    -- Stalling metal
+    if EVENT_ENABLED["STALLING_METAL"] then
+        if bab_event_current_metal_ratio < bab_eventc_metal_stall_ratio then -- stalling
+            if not bab_event_stalling_metal then -- just started stalling
+                insert_bound_command(frame, "STALLING_METAL", 1)
+                Spring.Echo("Event: STALLING_METAL started on frame: "..frame)
+            end
+            bab_event_stalling_metal = true
+        else -- not stalling
+            if bab_event_stalling_metal then -- cancel out stalling command
+                insert_bound_command(frame, "STALLING_METAL", -1)
+                Spring.Echo("Event: STALLING_METAL ended on frame: "..frame)
+            end
+            bab_event_stalling_metal = false
+        end
+    end
+    -- Floating metal
+    if EVENT_ENABLED["FLOATING_METAL"] then
+        if bab_event_current_metal_ratio > bab_eventc_metal_float_ratio then -- floating
+            if not bab_event_floating_metal then -- just started floating
+                insert_bound_command(frame, "FLOATING_METAL", 1)
+                Spring.Echo("Event: FLOATING_METAL started on frame: "..frame)
+            end
+            bab_event_floating_metal = true
+        else -- not stalling
+            if bab_event_floating_metal then -- cancel out floating command
+                insert_bound_command(frame, "FLOATING_METAL", -1)
+                Spring.Echo("Event: FLOATING_METAL ended on frame: "..frame)
+            end
+            bab_event_floating_metal = false
+        end
+    end
+    -- Stalling energy
+    if EVENT_ENABLED["STALLING_ENERGY"] then
+        if bab_event_current_energy_ratio < bab_eventc_energy_stall_ratio then -- stalling
+            if not bab_event_stalling_energy then -- just started stalling
+                insert_bound_command(frame, "STALLING_ENERGY", 1)
+                Spring.Echo("Event: STALLING_ENERGY started on frame: "..frame)
+            end
+            bab_event_stalling_energy = true
+        else -- not stalling
+            if bab_event_stalling_energy then -- cancel out stalling command
+                insert_bound_command(frame, "STALLING_ENERGY", -1)
+                Spring.Echo("Event: STALLING_ENERGY ended on frame: "..frame)
+            end
+            bab_event_stalling_energy = false
+        end
+    end
+    -- Floating energy
+    if EVENT_ENABLED["FLOATING_ENERGY"] then
+        if bab_event_current_energy_ratio > bab_eventc_energy_float_ratio then -- floating
+            if not bab_event_floating_energy then -- just started floating
+                insert_bound_command(frame, "FLOATING_ENERGY", 1)
+                Spring.Echo("Event: FLOATING_ENERGY started on frame: "..frame)
+            end
+            bab_event_floating_energy = true
+        else -- not stalling
+            if bab_event_floating_energy then -- cancel out floating command
+                insert_bound_command(frame, "FLOATING_ENERGY", -1)
+                Spring.Echo("Event: FLOATING_ENERGY ended on frame: "..frame)
+            end
+            bab_event_floating_energy = false
+        end
     end
 end
 
@@ -407,62 +546,62 @@ function widget:UnitFinished(unitID, unitDefID, unitTeam)
     end
 end
 
-function widget:UnitDestroyed(unitID, unitDefID, unitTeam, attackerID, attackerDefID, attackerTeam)
-    -- if unitTeam then
-    --     if unitTeam == userTeamID then
-    --         Spring.Echo("Your unit just died")
-    --         user_total_losses = user_total_losses + 1
-    --     end
-    -- end
+-- function widget:UnitDestroyed(unitID, unitDefID, unitTeam, attackerID, attackerDefID, attackerTeam)
+--     -- if unitTeam then
+--     --     if unitTeam == userTeamID then
+--     --         Spring.Echo("Your unit just died")
+--     --         user_total_losses = user_total_losses + 1
+--     --     end
+--     -- end
     
-    -- if not unitDefID then
-    --     Spring.Echo("Something died without a unitDefID")
-    --     return
-    -- end
-    -- if not attackerTeam then
-    --     Spring.Echo(UnitDefs[unitDefID].name .. "was killed by unknown team")
-    -- end
-    -- if not attackerDefID then
-    --     Spring.Echo("Attacker def unknown")
-    -- end
-    -- if attackerID then
-    --     Spring.Echo(attackerID.." got a kill")
-    --     local teamUnitTable = Spring.GetTeamUnits(userTeamID)
-    --     if teamUnitTable then
-    --         if teamUnitTable[attackerID] then
-    --             Spring.Echo("This is your unit")
-    --         end
+--     -- if not unitDefID then
+--     --     Spring.Echo("Something died without a unitDefID")
+--     --     return
+--     -- end
+--     -- if not attackerTeam then
+--     --     Spring.Echo(UnitDefs[unitDefID].name .. "was killed by unknown team")
+--     -- end
+--     -- if not attackerDefID then
+--     --     Spring.Echo("Attacker def unknown")
+--     -- end
+--     -- if attackerID then
+--     --     Spring.Echo(attackerID.." got a kill")
+--     --     local teamUnitTable = Spring.GetTeamUnits(userTeamID)
+--     --     if teamUnitTable then
+--     --         if teamUnitTable[attackerID] then
+--     --             Spring.Echo("This is your unit")
+--     --         end
             
-    --     end
-    -- else
-    --     Spring.Echo("AttackerID missing as well")
-    -- end
-    -- if not attackerTeam or not unitDefID or not attackerDefID then
-    --     return
-    -- end
-    -- -- TODO: Check if Gaia triggers this so random debris/trees aren't recorded
-    -- -- Player killed a unit
-    -- Spring.Echo("Unit has died. Killed by team: "..attackerTeam)
-    -- if attackerTeam == userTeamID then
-    --     user_total_kills = user_total_kills + 1
-    --     Spring.Echo("Player has: "..user_total_kills.. " kills")
-    --     if not attackerDefID then
-    --         Spring.Echo("An unknown player unit killed a"..UnitDefs[unitDefID].name)
-    --         return 
-    --     end
-    --     -- Add kill to overall player kills of a unit type
-    --     if not user_enemy_kill_counts[unitDefID] then
-    --         user_enemy_kill_counts[unitDefID] = 0
-    --     end
-    --     user_enemy_kill_counts[unitDefID] = user_enemy_kill_counts[unitDefID] + 1
-    --     -- Add kill to player's killcount by a specific unit
-    --     if not user_kills_by_unit_type[attackerDefID] then
-    --         user_kills_by_unit_type[attackerDefID] = 0
-    --     end
-    --     user_kills_by_unit_type[attackerDefID] = user_kills_by_unit_type[attackerDefID] + 1
-    -- end
-    -- -- Don't care about other kills
-end
+--     --     end
+--     -- else
+--     --     Spring.Echo("AttackerID missing as well")
+--     -- end
+--     -- if not attackerTeam or not unitDefID or not attackerDefID then
+--     --     return
+--     -- end
+--     -- -- TODO: Check if Gaia triggers this so random debris/trees aren't recorded
+--     -- -- Player killed a unit
+--     -- Spring.Echo("Unit has died. Killed by team: "..attackerTeam)
+--     -- if attackerTeam == userTeamID then
+--     --     user_total_kills = user_total_kills + 1
+--     --     Spring.Echo("Player has: "..user_total_kills.. " kills")
+--     --     if not attackerDefID then
+--     --         Spring.Echo("An unknown player unit killed a"..UnitDefs[unitDefID].name)
+--     --         return 
+--     --     end
+--     --     -- Add kill to overall player kills of a unit type
+--     --     if not user_enemy_kill_counts[unitDefID] then
+--     --         user_enemy_kill_counts[unitDefID] = 0
+--     --     end
+--     --     user_enemy_kill_counts[unitDefID] = user_enemy_kill_counts[unitDefID] + 1
+--     --     -- Add kill to player's killcount by a specific unit
+--     --     if not user_kills_by_unit_type[attackerDefID] then
+--     --         user_kills_by_unit_type[attackerDefID] = 0
+--     --     end
+--     --     user_kills_by_unit_type[attackerDefID] = user_kills_by_unit_type[attackerDefID] + 1
+--     -- end
+--     -- -- Don't care about other kills
+-- end
 
 function widget:GameFrame(n)
     frame = n
