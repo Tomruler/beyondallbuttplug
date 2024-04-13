@@ -16,8 +16,8 @@ end
 local COM_ID
 
 local globalPath = "LuaUI/Widgets/bpio/"
-local frameInterval = 1 -- in frames
-local printInterval = 2 -- in frames
+local frameInterval = 10 -- in frames
+local printInterval = 20 -- in frames
 
 local frame = 0
 local lastProcessedFrame = 0
@@ -227,6 +227,7 @@ local function load_binds()
                             end
                         end
                     end
+                    -- The param count here doesn't work due to how lua does numbers
                     Spring.Echo("Event: "..bound_event.." has: "..#EVENT_BINDS[bound_event]["PARAMS"].." parameters bound")
                 elseif line_words[1] == "TO" then --Add commands to event
                     local bound_command = line_words[2]
@@ -234,6 +235,10 @@ local function load_binds()
                     if not SUPPORTED_COMMANDS[bound_command] then
                         Spring.Echo(
                             "This command: "..bound_command.." is not listed as being supported. Are you sure this was spelled correctly?")
+                    end
+                    if not bound_event then
+                        Spring.Echo("No event to bind to")
+                        break
                     end
                     EVENT_BINDS[bound_event]["COMMAND"] = bound_command
                     for i = 3, #line_words, 1 do
@@ -287,7 +292,7 @@ end
 
 local function init_event_metrics()
     bab_event_CurrentIntervalTime = 0
-    bab_event_IntervalTime = EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"] * 30
+    bab_event_IntervalTime = tonumber(EVENT_BINDS["INTERVAL"]["PARAMS"]["Interval"]) * 30
     bab_event_OldKills = 0
     bab_event_CurrentKills = 0
     bab_event_OldComHitpoints = 0
@@ -296,10 +301,10 @@ local function init_event_metrics()
     bab_event_BuiltAfusCount = 0
     bab_event_current_metal_ratio = 0
     bab_event_current_energy_ratio = 0
-    bab_eventc_metal_stall_ratio = EVENT_BINDS["STALLING_METAL"]["PARAMS"]["Proportion"] or 0.01
-    bab_eventc_metal_float_ratio = EVENT_BINDS["FLOATING_METAL_METAL"]["PARAMS"]["Proportion"] or 0.95
-    bab_eventc_energy_stall_ratio = EVENT_BINDS["STALLING_ENERGY"]["PARAMS"]["Proportion"] or 0.05
-    bab_eventc_energy_float_ratio = EVENT_BINDS["FLOATING_ENERGY"]["PARAMS"]["Proportion"] or 0.98
+    bab_eventc_metal_stall_ratio = tonumber(EVENT_BINDS["STALLING_METAL"]["PARAMS"]["Proportion"]) or 0.01
+    bab_eventc_metal_float_ratio = tonumber(EVENT_BINDS["FLOATING_METAL"]["PARAMS"]["Proportion"]) or 0.95
+    bab_eventc_energy_stall_ratio = tonumber(EVENT_BINDS["STALLING_ENERGY"]["PARAMS"]["Proportion"]) or 0.05
+    bab_eventc_energy_float_ratio = tonumber(EVENT_BINDS["FLOATING_ENERGY"]["PARAMS"]["Proportion"]) or 0.98
     bab_event_stalling_metal = false
     bab_event_floating_metal = false
     bab_event_stalling_energy = false
@@ -374,7 +379,8 @@ end
 
 local function bab_eventf_calc_user_metal_ratio()
     local currentMetal, storageCapacity, _, _, _, _, _, _ = Spring.GetTeamResources(userTeamID, "metal")
-    if storageCapacity and not storageCapacity == 0 then
+    Spring.Echo("Metal:".. currentMetal .. " out of " .. storageCapacity)
+    if storageCapacity and storageCapacity ~= 0 then
         return currentMetal / storageCapacity
     end
     return 0
@@ -382,7 +388,8 @@ end
 
 local function bab_eventf_calc_user_energy_ratio()
     local currentEnergy, storageCapacity, _, _, _, _, _, _ = Spring.GetTeamResources(userTeamID, "energy")
-    if storageCapacity and not storageCapacity == 0 then
+    Spring.Echo("Energy:".. currentEnergy .. " out of " .. storageCapacity)
+    if storageCapacity and storageCapacity ~= 0 then
         return currentEnergy / storageCapacity
     end
     return 0
@@ -418,9 +425,11 @@ local function do_metrics()
     end
     if EVENT_ENABLED["STALLING_METAL"] or EVENT_ENABLED["FLOATING_METAL"] then
         bab_event_current_metal_ratio = bab_eventf_calc_user_metal_ratio()
+        Spring.Echo("Current metal ratio: " .. bab_event_current_metal_ratio)
     end
     if EVENT_ENABLED["STALLING_ENERGY"] or EVENT_ENABLED["FLOATING_ENERGY"] then
         bab_event_current_energy_ratio = bab_eventf_calc_user_energy_ratio()
+        Spring.Echo("Current energy ratio: " .. bab_event_current_energy_ratio)
     end
 end
 
@@ -676,6 +685,23 @@ local function bind_user_commander()
         Spring.Echo("No commanders found")
     end
 end
+-- WARNING: DO NOT USE; breaks power resetting logic
+-- local function recalc_user_resource_states()
+--     local current_metal_ratio = bab_eventf_calc_user_metal_ratio()
+--     local current_energy_ratio = bab_eventf_calc_user_energy_ratio()
+--     if current_metal_ratio < bab_eventc_metal_stall_ratio then
+--         bab_event_stalling_metal = true
+--     end
+--     if current_metal_ratio > bab_eventc_metal_float_ratio then
+--         bab_event_floating_metal = true
+--     end
+--     if current_energy_ratio < bab_eventc_energy_stall_ratio then
+--         bab_event_stalling_energy = true
+--     end
+--     if current_energy_ratio > bab_eventc_energy_float_ratio then
+--         bab_event_floating_energy = true
+--     end
+-- end
 
 function widget:GameStart()
     -- createPlayerTable()
@@ -683,6 +709,7 @@ function widget:GameStart()
     Spring.Echo("Looking for commanders")
     -- jank, refactor and consider multi-com scenarios
     bind_user_commander()
+    -- recalc_user_resource_states()
 end
 
 function widget:GameOver()

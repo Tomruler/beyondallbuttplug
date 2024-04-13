@@ -12,3 +12,11 @@ BIND ON_BUILD_AFUS
 TO VIBRATE Motor:-1 Strength:0.5 Duration:3
 BIND ON_COM_DAMAGED
 TO VIBRATE Motor:-1 Strength:0.1 Duration:0.1
+BIND STALLING_METAL Proportion:0.01
+TO POWER Motor:-1 Strength:0.1
+BIND FLOATING_METAL Proportion:0.95
+TO POWER Motor:-1 Strength:0.1
+BIND STALLING_ENERGY Proportion:0.05
+TO POWER Motor:-1 Strength:0.1
+BIND FLOATING_ENERGY Proportion:0.98
+TO POWER Motor:-1 Strength:0.1
