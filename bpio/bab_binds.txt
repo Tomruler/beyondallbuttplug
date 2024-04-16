@@ -18,3 +18,5 @@ BIND STALLING_ENERGY Proportion:0.05
 TO POWER Motor:-1 Strength:0.1
 BIND FLOATING_ENERGY Proportion:0.98
 TO POWER Motor:-1 Strength:0.1
+BIND SCREEN_SHAKE ShakeThreshold:0.001
+TO VIBRATE Motor:-1 Strength:0.05 Duration:0.03

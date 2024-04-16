@@ -12,7 +12,7 @@ function widget:GetInfo()
 end
 --Acknowledgements:
 --hihoman23: the "export data as csv" BAR widget, which served as the skeleton/reference for much of this code
-
+--trepan: Basegame camera shake code (large parts copied for the screen shake event)
 local COM_ID
 
 local globalPath = "LuaUI/Widgets/bpio/"
@@ -115,8 +115,14 @@ local EVENT_BINDS = {
         ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.1},
         ["C_PARAMS_SCALED"] = {["Strength"] = 1},
     },
-
-}
+    ["SCREEN_SHAKE"] = {
+        ["PARAMS"] = {["ShakeThreshold"] = 0.001},
+        ["COMMAND"] = "VIBRATE",
+        ["C_PARAMS"] = { ["Motor"] = -1, ["Strength"] = 0.05, ["Duration"] = 0.03 },
+        ["C_PARAMS_SCALED"] = {["Strength"] = 1},
+        ["QUANTITY_PER_SCALE_FACTOR"] = 0.004
+    },
+}   
 
 -- Commands recognized by the BAB client. Unsupported commands won't crash the client, but won't do anything either
 local SUPPORTED_COMMANDS = {
@@ -139,6 +145,7 @@ local EVENT_ENABLED =
     ["FLOATING_METAL"] = false,
     ["STALLING_ENERGY"] = false,
     ["FLOATING_ENERGY"] = false,
+    ["SCREEN_SHAKE"] = false,
 }
 
 local user_total_kills = 0
@@ -167,6 +174,10 @@ local bab_event_floating_metal = false
 local bab_event_stalling_energy = false
 local bab_event_floating_energy = false
 
+local bab_eventc_min_screen_shake_power = 0.001
+local bab_eventc_screen_shake_decay_per_second = 5
+local bab_event_screen_shake_explosions = 0
+local bab_event_screen_shake_intensity = 0
 
 local function print_table(tbl, indent)
     indent = indent or 0
@@ -309,6 +320,10 @@ local function init_event_metrics()
     bab_event_floating_metal = false
     bab_event_stalling_energy = false
     bab_event_floating_energy = false
+    bab_eventc_min_screen_shake_power = tonumber(EVENT_BINDS["SCREEN_SHAKE"]["PARAMS"]["ShakeThreshold"]) or 0.001
+    bab_eventc_screen_shake_decay_per_second = 5
+    bab_event_screen_shake_explosions = 0
+    bab_event_screen_shake_intensity = 0
 end
 
 local queuedCommands = {}
@@ -379,7 +394,7 @@ end
 
 local function bab_eventf_calc_user_metal_ratio()
     local currentMetal, storageCapacity, _, _, _, _, _, _ = Spring.GetTeamResources(userTeamID, "metal")
-    Spring.Echo("Metal:".. currentMetal .. " out of " .. storageCapacity)
+    -- Spring.Echo("Metal:".. currentMetal .. " out of " .. storageCapacity)
     if storageCapacity and storageCapacity ~= 0 then
         return currentMetal / storageCapacity
     end
@@ -388,11 +403,16 @@ end
 
 local function bab_eventf_calc_user_energy_ratio()
     local currentEnergy, storageCapacity, _, _, _, _, _, _ = Spring.GetTeamResources(userTeamID, "energy")
-    Spring.Echo("Energy:".. currentEnergy .. " out of " .. storageCapacity)
+    -- Spring.Echo("Energy:".. currentEnergy .. " out of " .. storageCapacity)
     if storageCapacity and storageCapacity ~= 0 then
         return currentEnergy / storageCapacity
     end
     return 0
+end
+
+local function baba_eventf_calc_screen_shake_intensity()
+    -- Here for standardization
+    return bab_event_screen_shake_intensity
 end
 
 local function do_metrics()
@@ -425,11 +445,15 @@ local function do_metrics()
     end
     if EVENT_ENABLED["STALLING_METAL"] or EVENT_ENABLED["FLOATING_METAL"] then
         bab_event_current_metal_ratio = bab_eventf_calc_user_metal_ratio()
-        Spring.Echo("Current metal ratio: " .. bab_event_current_metal_ratio)
+        -- Spring.Echo("Current metal ratio: " .. bab_event_current_metal_ratio)
     end
     if EVENT_ENABLED["STALLING_ENERGY"] or EVENT_ENABLED["FLOATING_ENERGY"] then
         bab_event_current_energy_ratio = bab_eventf_calc_user_energy_ratio()
-        Spring.Echo("Current energy ratio: " .. bab_event_current_energy_ratio)
+        -- Spring.Echo("Current energy ratio: " .. bab_event_current_energy_ratio)
+    end
+    if EVENT_ENABLED["SCREEN_SHAKE"] then
+        -- Does nothing, this function returns the variable itself for now
+        bab_event_screen_shake_intensity = baba_eventf_calc_screen_shake_intensity()
     end
 end
 
@@ -530,6 +554,14 @@ local function check_events()
             bab_event_floating_energy = false
         end
     end
+    -- Screen Shaking
+    if EVENT_ENABLED["SCREEN_SHAKE"] then
+        if bab_event_screen_shake_intensity > bab_eventc_min_screen_shake_power then
+            insert_bound_command(frame, "SCREEN_SHAKE", 
+                bab_event_screen_shake_intensity / EVENT_BINDS["SCREEN_SHAKE"]["QUANTITY_PER_SCALE_FACTOR"])
+            Spring.Echo("Event: SCREEN_SHAKE started on frame: " .. frame)
+        end
+    end
 end
 
 local function process_events(force)
@@ -544,6 +576,22 @@ end
 local function bab_reset(fromAction)
     Spring.Echo("Emergency Stop Triggered")
     insert_bound_command(frame, "ON_END")
+end
+
+function widget:ShockFront(power, dx, dy, dz)
+    if not EVENT_ENABLED["SCREEN_SHAKE"] then return end
+	if not WG or not WG['camerashake'] or WG['camerashake'].getStrength() <= 0 then
+        Spring.Echo("Camera shake suppressed")
+		return
+	end
+	bab_event_screen_shake_explosions = bab_event_screen_shake_explosions + 1
+    Spring.Echo("Explosion: "..bab_event_screen_shake_explosions.." Power: "..power)
+	if power > 0.0004 then
+		power = 0.0004
+	end
+	power = power * WG['camerashake'].getStrength()
+	bab_event_screen_shake_intensity = bab_event_screen_shake_intensity + power
+    Spring.Echo("Current shake intensity: "..bab_event_screen_shake_intensity)
 end
 
 function widget:UnitFinished(unitID, unitDefID, unitTeam)
@@ -625,6 +673,16 @@ function widget:GameFrame(n)
         -- print_table(sp_GetTeamStatsHistory(0))
     end
     -- Spring.GetTeamUnitsByDefs(0, )
+end
+
+function widget:Update(dt)
+    if EVENT_ENABLED["SCREEN_SHAKE"] then
+        local decay = (1 - (bab_eventc_screen_shake_decay_per_second * dt))
+        if decay < 0 then
+            decay = 0
+        end
+        bab_event_screen_shake_intensity = bab_event_screen_shake_intensity * decay
+    end
 end
 
 local function reset_event_file()
