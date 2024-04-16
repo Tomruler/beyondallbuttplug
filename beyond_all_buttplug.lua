@@ -581,17 +581,17 @@ end
 function widget:ShockFront(power, dx, dy, dz)
     if not EVENT_ENABLED["SCREEN_SHAKE"] then return end
 	if not WG or not WG['camerashake'] or WG['camerashake'].getStrength() <= 0 then
-        Spring.Echo("Camera shake suppressed")
+        -- Spring.Echo("Camera shake suppressed")
 		return
 	end
 	bab_event_screen_shake_explosions = bab_event_screen_shake_explosions + 1
-    Spring.Echo("Explosion: "..bab_event_screen_shake_explosions.." Power: "..power)
+    -- Spring.Echo("Explosion: "..bab_event_screen_shake_explosions.." Power: "..power)
 	if power > 0.0004 then
 		power = 0.0004
 	end
 	power = power * WG['camerashake'].getStrength()
 	bab_event_screen_shake_intensity = bab_event_screen_shake_intensity + power
-    Spring.Echo("Current shake intensity: "..bab_event_screen_shake_intensity)
+    -- Spring.Echo("Current shake intensity: "..bab_event_screen_shake_intensity)
 end
 
 function widget:UnitFinished(unitID, unitDefID, unitTeam)
