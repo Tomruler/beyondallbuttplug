@@ -16,8 +16,8 @@ end
 local COM_ID
 
 local globalPath = "LuaUI/Widgets/bpio/"
-local frameInterval = 10 -- in frames
-local printInterval = 20 -- in frames
+local frameInterval = 1 -- in frames
+local printInterval = 2 -- in frames
 
 local frame = 0
 local lastProcessedFrame = 0
