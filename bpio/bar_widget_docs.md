@@ -34,6 +34,8 @@ TO BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 - [SCREEN_SHAKE](#bar-event-screen-shake)🛠️
 - [COM_GAIN_XP](#bar-event-com_gain_xp)❌
 - [RECEIVED_T2_CON](#bar-event-received_t2_con)❌
+- [ON_PINGED](#bar-event-on_pinged)❌
+- [ON_BUILD_UNIT_IN_LIST](#bar-event-on_build_unit_in_list)❌
 ## Supported BAB Events
 - [VIBRATE](#bab-event-vibrate)✅
 - [POWER](#bab-event-power)✅
@@ -103,6 +105,14 @@ TO BAB_EVENT PARAM1:VALUE PARAM2:VALUE ... PARAMN:VALUE
 ### BAR EVENT: RECEIVED_T2_CON
 - Triggers when an ally gives you a T2 con
 - Params: N/A
+
+### BAR EVENT: ON_PINGED
+- Triggers when a map ping occurs
+- Params: N/A
+
+### BAR EVENT: ON_BUILD_UNIT_IN_LIST
+- Triggers when a unit is built whose name is in the param list.
+- Params: One or more unit names. See: https://www.beyondallreason.info/unit/armflea for an example of where to find the unit name (the last word in the URL of the page).
 
 # BAB EVENTS
 
