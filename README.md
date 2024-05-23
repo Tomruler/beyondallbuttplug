@@ -13,8 +13,9 @@ Published under GPL V2+ License
 6. Run "bpio/bab_client.exe" and hit "Connect" on the GUI to link to Intiface. You should feel a quick pulse from your device.
 7. Have Fun!
 
-## Demo Video:
-WIP
+## Demo Video (Open link in new tab):
+[![bab_logo_censored](https://github.com/Tomruler/beyondallbuttplug/assets/48689384/a3c556fd-452c-4dee-957a-a1b82f303dde)](https://youtu.be/_-xgEshBpVU) \
+[Link](https://youtu.be/_-xgEshBpVU)
 
 ## Documentation
 Overall project documentation: documentation.md
